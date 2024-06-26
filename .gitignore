@@ -1,0 +1,6 @@
+credentials.py
+.streamlit/secrets.toml
+.vs/*
+utils/__pycache__/*
+utils/*.pyc
+.DS_Store

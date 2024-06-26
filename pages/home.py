@@ -4,4 +4,6 @@ import numpy as np
 
 from utils.pages_and_titles import *
 
-set_page(layout = 'wide', page_title = 'Biz Metrics')
+st.title("Home")
+st.write("Here comes the home content.")
+
