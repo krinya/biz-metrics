@@ -24,23 +24,17 @@ def selected_dataset_column_mapping(dataset):
 
     return df_with_colnames_and_coltypes, colnames_in_the_dataset, coltypes_in_the_dataset
 
-def create_maped_dataset(dataset):
-
-    if 'maped_dataset' not in st.session_state:
-        maped_dataset = dataset
-        st.session_state.maped_dataset = maped_dataset
-
 with tab1:
     if 'dataset1' not in st.session_state:
         dataset1_path = "sample_datasets/ecommerce_data1.csv"
-        dataset1 = pd.read_csv(dataset1_path, encoding='latin1')
+        dataset1 = pd.read_csv(dataset1_path)
         st.session_state.dataset1 = dataset1
         st.session_state.dataset1_shape = dataset1.shape
     st.dataframe(st.session_state.dataset1 , use_container_width=True, hide_index=True)
-    col1, col2, col3, col4, col5, col6 = st.columns(6)
+    col1, col2, col3 = st.columns([2, 4, 2])
     with col1:
         st.write(f"Dataset has: {st.session_state.dataset1_shape[0]} rows, {st.session_state.dataset1_shape[1]} columns")
-    with col6:
+    with col3:
         st.download_button("Download Dataset 1", data=st.session_state.dataset1.to_csv(index=False), file_name='ecommerce_data1.csv', mime='text/csv', key='download_button_ds1')
     st.button("Select this dataset", on_click=select_dataset_button_press, args=('dataset1', ), key='dataset1_button')
 
@@ -51,25 +45,24 @@ with tab2:
         st.session_state.dataset2 = dataset2
         st.session_state.dataset2_shape = dataset2.shape
     st.dataframe(st.session_state.dataset2, use_container_width=True, hide_index=True)
-    col1, col2, col3, col4, col5, col6 = st.columns(6)
+    col1, col2, col3 = st.columns([2, 4, 2])
     with col1:
         st.write(f"Dataset has: {st.session_state.dataset2_shape[0]} rows, {st.session_state.dataset2_shape[1]} columns")
-    with col6:
+    with col3:
         st.download_button("Download Dataset 2", data=st.session_state.dataset2.to_csv(index=False), file_name='ecommerce_data2.csv', mime='text/csv', key='download_button_ds2')
     st.button("Select this dataset", on_click=select_dataset_button_press, args=('dataset2', ), key='dataset2_button')
 
 with tab3:
     if 'dataset3' not in st.session_state:
         dataset3_path = "sample_datasets/ecommerce_data3.csv"
-        dataset3 = pd.read_csv(dataset3_path)
-        dataset3['total_price'] = dataset3['Unit price'] * dataset3['Quantity']
+        dataset3 = pd.read_csv(dataset3_path, encoding='latin1')
         st.session_state.dataset3 = dataset3
         st.session_state.dataset3_shape = dataset3.shape
     st.dataframe(st.session_state.dataset3, use_container_width=True, hide_index=True)
-    col1, col2, col3, col4, col5, col6 = st.columns(6)
+    col1, col2, col3 = st.columns([2, 4, 2])
     with col1:
         st.write(f"Dataset has: {st.session_state.dataset3_shape[0]} rows, {st.session_state.dataset3_shape[1]} columns")
-    with col6:
+    with col3:
         st.download_button("Download Dataset 3", data=st.session_state.dataset3.to_csv(index=False), file_name='ecommerce_data3.csv', mime='text/csv', key='download_button_ds3')
     st.button("Select this dataset", on_click=select_dataset_button_press, args=('dataset3', ), key='dataset3_button')
 
@@ -81,10 +74,10 @@ with tab_own:
             st.session_state.own_data = own_data
             st.session_state.own_data_shape = own_data.shape
         st.dataframe(st.session_state.own_data, use_container_width=True, hide_index=True)
-        col1, col2, col3, col4, col5, col6 = st.columns(6)
+        col1, col2, col3 = st.columns([2, 4, 2])
         with col1:
             st.write(f"Dataset has: {st.session_state.own_data_shape[0]} rows, {st.session_state.own_data_shape[1]} columns")
-        with col6:
+        with col3:
             st.download_button("Download Own Dataset", data=st.session_state.own_data.to_csv(index=False), file_name='own_data.csv', mime='text/csv', key='download_button_own_data')
         st.button("Select this dataset", on_click=select_dataset_button_press, args=('own_data', ), key='own_data_button')
     else:
@@ -97,26 +90,47 @@ if 'selected_row_data' in st.session_state:
     # write the name of the dataset
     name_of_dataset = st.session_state.selected_row_data
     st.markdown(f"### You selected the following dataset: {st.session_state.dataset_name}")
-    st.dataframe(st.session_state.selected_row_data, use_container_width=True, hide_index=True)
+    #st.dataframe(st.session_state.selected_row_data, use_container_width=True, hide_index=True)
 
     # Map the columns
     st.markdown("### Map the columns of the dataset to the required columns")
     column_mapping_df, colnames_in_the_dataset, coltypes_in_the_dataset = selected_dataset_column_mapping(st.session_state.selected_row_data)
     #st.dataframe(column_mapping_df, use_container_width=True, hide_index=True)
 
-    if st.session_state.dataset_name == 'dataset2':
-        st.markdown("You selected dataset2 here I already maped the columns for you.")
+    if st.session_state.dataset_name == 'dataset1':
+        st.markdown("You selected dataset1 here I already maped the columns for you, but if you would like to change someting you can do it.")
+        user_id_column_defualt = 'Customer type'
+        transaction_id_column_defualt = 'Invoice ID'
+        transaction_date_column_defualt = 'Date'
+        sales_quantity_column_defualt = 'Quantity'
+        unit_price_column_defualt = 'Unit price'
+        sales_value_column_defualt = 'No column is selected'
+        segment_column_defualt = ['Branch', 'City']
+    elif st.session_state.dataset_name == 'dataset2':
+        st.markdown("You selected dataset2 here I already maped the columns for you, but if you would like to change someting you can do it.")
         user_id_column_defualt = 'Customer ID'
         transaction_id_column_defualt = 'Order ID'
         transaction_date_column_defualt = 'Order Date'
         sales_quantity_column_defualt = 'No column is selected'
+        unit_price_column_defualt = 'No column is selected'
         sales_value_column_defualt = 'Sales'
         segment_column_defualt = ['Segment', 'City']
+    elif st.session_state.dataset_name == 'dataset3':
+        st.markdown("You selected dataset3 here I already maped the columns for you, but if you would like to change someting you can do it.")
+        user_id_column_defualt = 'CustomerID'
+        transaction_id_column_defualt = 'InvoiceNo'
+        transaction_date_column_defualt = 'InvoiceDate'
+        sales_quantity_column_defualt = 'Quantity'
+        unit_price_column_defualt = 'UnitPrice'
+        sales_value_column_defualt = 'No column is selected'
+        segment_column_defualt = ['Country']
     else:
+        st.markdown("You selected your own dataset, please map the columns to the required columns.")
         user_id_column_defualt = 'No column is selected'
         transaction_id_column_defualt = 'No column is selected'
         transaction_date_column_defualt = 'No column is selected'
         sales_quantity_column_defualt = 'No column is selected'
+        unit_price_column_defualt = 'No column is selected'
         sales_value_column_defualt = 'No column is selected'
         segment_column_defualt = None
 
@@ -142,6 +156,11 @@ if 'selected_row_data' in st.session_state:
     col1, col2 = st.columns([1, 1])
     with col1:
         st.selectbox("Select Sales Quantity column", colnames_in_the_dataset, key='sales_quantity_column_selected', index=colnames_in_the_dataset.index(sales_quantity_column_defualt))
+    
+    st.markdown("### Select Unit Price column")
+    col1, col2 = st.columns([1, 1])
+    with col1:
+        st.selectbox("Select Unit Price column", colnames_in_the_dataset, key='unit_price_column_selected', index=colnames_in_the_dataset.index(unit_price_column_defualt))
 
     st.markdown("### Select Sales Value column")
     col1, col2 = st.columns([1, 1])
@@ -160,6 +179,7 @@ if 'selected_row_data' in st.session_state:
         invoice_id_column = st.session_state.transaction_id_column_selected
         transaction_date_column = st.session_state.transaction_date_column_selected
         sales_quantity_column = st.session_state.sales_quantity_column_selected
+        unit_price_column = st.session_state.unit_price_column_selected
         sales_amount_column = st.session_state.sales_value_column_selected
         segment_column = st.session_state.segment_column_selected
 
@@ -204,6 +224,15 @@ if 'selected_row_data' in st.session_state:
                 # convert it to numeric
                 st.session_state.transaction_maped_dataset['sales_quantity'] = pd.to_numeric(st.session_state.transaction_maped_dataset['sales_quantity'], errors='coerce')
 
+            if unit_price_column != 'No column is selected':
+                st.session_state.transaction_maped_dataset['unit_price'] = dataset[unit_price_column]
+                # convert it to numeric
+                st.session_state.transaction_maped_dataset['unit_price'] = pd.to_numeric(st.session_state.transaction_maped_dataset['unit_price'], errors='coerce')
+            if unit_price_column == 'No column is selected':
+                st.session_state.transaction_maped_dataset['unit_price'] = 1
+                # convert it to numeric
+                st.session_state.transaction_maped_dataset['unit_price'] = pd.to_numeric(st.session_state.transaction_maped_dataset['unit_price'], errors='coerce')
+
             if sales_amount_column != 'No column is selected':
                 st.session_state.transaction_maped_dataset['sales_value'] = dataset[sales_amount_column]
                 # convert it to numeric
@@ -218,6 +247,10 @@ if 'selected_row_data' in st.session_state:
             if segment_column == ['No column is selected'] or segment_column == [] or segment_column == None:
                 st.session_state.transaction_maped_dataset['segment'] = 'All Segments'
 
+            # if unit_price_column not 'No column is selected' and sales_quantity_column not 'No column is selected' then calculate the sales_value
+            if unit_price_column != 'No column is selected' and sales_quantity_column != 'No column is selected':
+                st.session_state.transaction_maped_dataset['sales_value'] = st.session_state.transaction_maped_dataset['unit_price'] * st.session_state.transaction_maped_dataset['sales_quantity']
+
 
     # create the mapped dataset using a button
     if st.button("Create Mapped Dataset"):
@@ -228,10 +261,10 @@ if 'selected_row_data' in st.session_state:
     st.markdown("### Mapped Dataset")
     if 'transaction_maped_dataset' in st.session_state:
         st.dataframe(st.session_state.transaction_maped_dataset, use_container_width=True, hide_index=True)
-        col1, col2, col3, col4, col5, col6 = st.columns(6)
+        col1, col2, col3 = st.columns([2, 4, 2])
         with col1:
             st.write(f"Dataset has: {st.session_state.transaction_maped_dataset_shape[0]} rows, {st.session_state.transaction_maped_dataset_shape[1]} columns")
-        with col6:
+        with col3:
             st.download_button("Download Mapped Dataset", data=st.session_state.transaction_maped_dataset.to_csv(index=False), file_name='transaction_maped_dataset.csv', mime='text/csv', key='download_button_transaction_maped_dataset')
     else:
         st.markdown("Please create the mapped dataset.")

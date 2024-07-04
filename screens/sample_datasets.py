@@ -11,7 +11,7 @@ st.markdown("## Transaction Samples")
 st.markdown("### Dataset 1")
 if 'dataset1' not in st.session_state:
     dataset1_path = "sample_datasets/ecommerce_data1.csv"
-    dataset1 = pd.read_csv(dataset1_path, encoding='latin1')
+    dataset1 = pd.read_csv(dataset1_path)
     st.session_state.dataset1 = dataset1
     st.session_state.dataset1_shape = dataset1.shape
 st.dataframe(st.session_state.dataset1, use_container_width=True, hide_index=True)
@@ -31,8 +31,7 @@ st.download_button("Download Dataset 2", data=st.session_state.dataset2.to_csv(i
 st.markdown("### Dataset 3")
 if 'dataset3' not in st.session_state:
     dataset3_path = "sample_datasets/ecommerce_data3.csv"
-    dataset3 = pd.read_csv(dataset3_path)
-    dataset3['total_price'] = dataset3['Unit price'] * dataset3['Quantity']
+    dataset3 = pd.read_csv(dataset3_path, encoding='latin1')
     st.session_state.dataset3 = dataset3
     st.session_state.dataset3_shape = dataset3.shape
 st.dataframe(st.session_state.dataset3, use_container_width=True, hide_index=True)
