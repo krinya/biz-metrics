@@ -4,6 +4,11 @@ import numpy as np
 import plotly.express as px
 
 from utils.pages_and_titles import *
+from utils.read_config import *
+
+# read the config file
+config_all = read_config()
+ts_cf = read_config(section = 'transaction_statistics')
 
 st.title("Transaction Statistics")
 st.markdown("Here you can see some statistics about transactions.")
@@ -33,7 +38,15 @@ with col1:
 col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
 with col1:
     # select grouping for barchart
-    st.selectbox('Select barmode for barchart', ['group', 'overlay', 'relative'], key='groping_plot_option')
+    barmode_option = ['group', 'overlay', 'relative']
+    barmode_default = ts_cf['graph_options']['barmode_default']
+    st.selectbox('Select barmode for barchart', barmode_option, key='groping_plot_option', index=barmode_option.index(barmode_default))
+
+with col2:
+    # select True or False for text_auto
+    text_auto_option = [True, False]
+    text_auto_default = ts_cf['graph_options']['text_auto_default']
+    st.selectbox('Select text_auto for barchart', text_auto_option, key='text_auto_option', index=text_auto_option.index(text_auto_default))
 
 def filter_transaction_data(data, segment_filter):
 
@@ -63,7 +76,7 @@ if st.session_state.filter_transaction_data_clicked == 1:
 if 'transaction_maped_dataset_filtered' not in st.session_state:
     st.session_state.transaction_maped_dataset_filtered = st.session_state.transaction_maped_dataset
 
-def transaction_time_series_by_segment(data, x_column, barmode_option='group'):
+def transaction_time_series_by_segment(data, x_column, barmode_option='group', text_auto=True):
 
     if x_column == 'total':
         data_summary = data.groupby(['segment']).agg(
@@ -71,8 +84,8 @@ def transaction_time_series_by_segment(data, x_column, barmode_option='group'):
             revenue=('sales_value', 'sum')
         ).reset_index()
 
-        fig_quantity = px.bar(data_summary,y='quantity', color='segment', barmode=barmode_option)
-        fig_revenue = px.bar(data_summary, y='revenue', color='segment', barmode=barmode_option)
+        fig_quantity = px.bar(data_summary,y='quantity', color='segment', barmode=barmode_option, text_auto=text_auto)
+        fig_revenue = px.bar(data_summary, y='revenue', color='segment', barmode=barmode_option, text_auto=text_auto)
 
     else:
         data_summary = data.groupby([x_column, 'segment']).agg(
@@ -80,12 +93,12 @@ def transaction_time_series_by_segment(data, x_column, barmode_option='group'):
             revenue=('sales_value', 'sum')
         ).reset_index()
 
-        fig_quantity = px.bar(data_summary, x=x_column, y='quantity', color='segment', barmode=barmode_option)
-        fig_revenue = px.bar(data_summary, x=x_column, y='revenue', color='segment', barmode=barmode_option)
+        fig_quantity = px.bar(data_summary, x=x_column, y='quantity', color='segment', barmode=barmode_option, text_auto=text_auto)
+        fig_revenue = px.bar(data_summary, x=x_column, y='revenue', color='segment', barmode=barmode_option, text_auto=text_auto)
 
     return fig_quantity, fig_revenue
 
-def transaction_time_series_total(data, x_column, barmode_option='group'):
+def transaction_time_series_total(data, x_column, barmode_option='group', text_auto=True):
 
     if x_column == 'total':
         # create a temp column to group by
@@ -95,16 +108,16 @@ def transaction_time_series_total(data, x_column, barmode_option='group'):
             revenue=('sales_value', 'sum')
         ).reset_index()
 
-        fig_quantity = px.bar(data_summary, y='quantity', barmode=barmode_option)
-        fig_revenue = px.bar(data_summary, y='revenue', barmode=barmode_option)
+        fig_quantity = px.bar(data_summary, y='quantity', barmode=barmode_option, text_auto=text_auto)
+        fig_revenue = px.bar(data_summary, y='revenue', barmode=barmode_option, text_auto=text_auto)
     else:
         data_summary = data.groupby([x_column]).agg(
             quantity=('sales_quantity', 'sum'),
             revenue=('sales_value', 'sum')
         ).reset_index()
 
-        fig_quantity = px.bar(data_summary, x=x_column, y='quantity', barmode=barmode_option)
-        fig_revenue = px.bar(data_summary, x=x_column, y='revenue', barmode=barmode_option)
+        fig_quantity = px.bar(data_summary, x=x_column, y='quantity', barmode=barmode_option, text_auto=text_auto)
+        fig_revenue = px.bar(data_summary, x=x_column, y='revenue', barmode=barmode_option, text_auto=text_auto)
 
     return fig_quantity, fig_revenue
 
@@ -115,12 +128,12 @@ custom_theme = None
 with tab1:
     st.markdown("## Total")
     st.write("Here you can see the total number of transactions.")
-    total_total_q_plot, total_total_r_plot = transaction_time_series_total(st.session_state.transaction_maped_dataset_filtered, 'total', barmode_option=st.session_state.groping_plot_option)
+    total_total_q_plot, total_total_r_plot = transaction_time_series_total(st.session_state.transaction_maped_dataset_filtered, 'total', barmode_option=st.session_state.groping_plot_option, text_auto=st.session_state.text_auto_option)
     st.markdown("### Total Quantity")
     st.plotly_chart(total_total_q_plot, theme=custom_theme)
     st.markdown("### Total Revenue")
     st.plotly_chart(total_total_r_plot, theme=custom_theme)
-    total_segment_q_plot, total_segment_r_plot = transaction_time_series_by_segment(st.session_state.transaction_maped_dataset_filtered, 'total', barmode_option=st.session_state.groping_plot_option)
+    total_segment_q_plot, total_segment_r_plot = transaction_time_series_by_segment(st.session_state.transaction_maped_dataset_filtered, 'total', barmode_option=st.session_state.groping_plot_option, text_auto=st.session_state.text_auto_option)
     st.markdown("### Total Quantity by Segment")
     st.plotly_chart(total_segment_q_plot, theme=custom_theme)
     st.markdown("### Total Revenue by Segment")
@@ -129,12 +142,12 @@ with tab1:
 with tab2:
     st.markdown("## Daily")
     st.write("Here you can see the daily number of transactions.")
-    daily_total_q_plot, daily_total_r_plot = transaction_time_series_total(st.session_state.transaction_maped_dataset_filtered, 'transaction_date', barmode_option=st.session_state.groping_plot_option)
+    daily_total_q_plot, daily_total_r_plot = transaction_time_series_total(st.session_state.transaction_maped_dataset_filtered, 'transaction_date', barmode_option=st.session_state.groping_plot_option, text_auto=st.session_state.text_auto_option)
     st.markdown("### Daily Quantity")
     st.plotly_chart(daily_total_q_plot, theme=custom_theme)
     st.markdown("### Daily Revenue")
     st.plotly_chart(daily_total_r_plot, theme=custom_theme)
-    daily_segment_q_plot, daily_segment_r_plot = transaction_time_series_by_segment(st.session_state.transaction_maped_dataset_filtered, 'transaction_date', barmode_option=st.session_state.groping_plot_option)
+    daily_segment_q_plot, daily_segment_r_plot = transaction_time_series_by_segment(st.session_state.transaction_maped_dataset_filtered, 'transaction_date', barmode_option=st.session_state.groping_plot_option, text_auto=st.session_state.text_auto_option)
     st.markdown("### Daily Quantity by Segment")
     st.plotly_chart(daily_segment_q_plot, theme=custom_theme)
     st.markdown("### Daily Revenue by Segment")
@@ -143,12 +156,12 @@ with tab2:
 with tab3:
     st.markdown("## Weekly")
     st.write("Here you can see the weekly number of transactions.")
-    weekly_total_q_plot, weekly_total_r_plot = transaction_time_series_total(st.session_state.transaction_maped_dataset_filtered, 'transaction_week_date', barmode_option=st.session_state.groping_plot_option)
+    weekly_total_q_plot, weekly_total_r_plot = transaction_time_series_total(st.session_state.transaction_maped_dataset_filtered, 'transaction_week_date', barmode_option=st.session_state.groping_plot_option, text_auto=st.session_state.text_auto_option)
     st.markdown("### Weekly Quantity")
     st.plotly_chart(weekly_total_q_plot, theme=custom_theme)
     st.markdown("### Weekly Revenue")
     st.plotly_chart(weekly_total_r_plot, theme=custom_theme)
-    weekly_segment_q_plot, weekly_segment_r_plot = transaction_time_series_by_segment(st.session_state.transaction_maped_dataset_filtered, 'transaction_week_date', barmode_option=st.session_state.groping_plot_option)
+    weekly_segment_q_plot, weekly_segment_r_plot = transaction_time_series_by_segment(st.session_state.transaction_maped_dataset_filtered, 'transaction_week_date', barmode_option=st.session_state.groping_plot_option, text_auto=st.session_state.text_auto_option)
     st.markdown("### Weekly Quantity by Segment")
     st.plotly_chart(weekly_segment_q_plot, theme=custom_theme)
     st.markdown("### Weekly Revenue by Segment")
@@ -157,12 +170,12 @@ with tab3:
 with tab4:
     st.markdown("## Monthly")
     st.write("Here you can see the monthly number of transactions.")
-    monthly_total_q_plot, monthly_total_r_plot = transaction_time_series_total(st.session_state.transaction_maped_dataset_filtered, 'transaction_month_date', barmode_option=st.session_state.groping_plot_option)
+    monthly_total_q_plot, monthly_total_r_plot = transaction_time_series_total(st.session_state.transaction_maped_dataset_filtered, 'transaction_month_date', barmode_option=st.session_state.groping_plot_option, text_auto=st.session_state.text_auto_option)
     st.markdown("### Monthly Quantity")
     st.plotly_chart(monthly_total_q_plot, theme=custom_theme)
     st.markdown("### Monthly Revenue")
     st.plotly_chart(monthly_total_r_plot, theme=custom_theme)
-    monthly_segment_q_plot, monthly_segment_r_plot = transaction_time_series_by_segment(st.session_state.transaction_maped_dataset_filtered, 'transaction_month_date', barmode_option=st.session_state.groping_plot_option)
+    monthly_segment_q_plot, monthly_segment_r_plot = transaction_time_series_by_segment(st.session_state.transaction_maped_dataset_filtered, 'transaction_month_date', barmode_option=st.session_state.groping_plot_option, text_auto=st.session_state.text_auto_option)
     st.markdown("### Monthly Quantity by Segment")
     st.plotly_chart(monthly_segment_q_plot, theme=custom_theme)
     st.markdown("### Monthly Revenue by Segment")
@@ -171,12 +184,12 @@ with tab4:
 with tab5:
     st.markdown("## Yearly")
     st.write("Here you can see the yearly number of transactions.")
-    yearly_total_q_plot, yearly_total_r_plot = transaction_time_series_total(st.session_state.transaction_maped_dataset_filtered, 'transaction_year_date', barmode_option=st.session_state.groping_plot_option)
+    yearly_total_q_plot, yearly_total_r_plot = transaction_time_series_total(st.session_state.transaction_maped_dataset_filtered, 'transaction_year_date', barmode_option=st.session_state.groping_plot_option, text_auto=st.session_state.text_auto_option)
     st.markdown("### Yearly Quantity")
     st.plotly_chart(yearly_total_q_plot, theme=custom_theme)
     st.markdown("### Yearly Revenue")
     st.plotly_chart(yearly_total_r_plot, theme=custom_theme)
-    yearly_segment_q_plot, yearly_segment_r_plot = transaction_time_series_by_segment(st.session_state.transaction_maped_dataset_filtered, 'transaction_year_date', barmode_option=st.session_state.groping_plot_option)
+    yearly_segment_q_plot, yearly_segment_r_plot = transaction_time_series_by_segment(st.session_state.transaction_maped_dataset_filtered, 'transaction_year_date', barmode_option=st.session_state.groping_plot_option, text_auto=st.session_state.text_auto_option)
     st.markdown("### Yearly Quantity by Segment")
     st.plotly_chart(yearly_segment_q_plot, theme=custom_theme)
     st.markdown("### Yearly Revenue by Segment")

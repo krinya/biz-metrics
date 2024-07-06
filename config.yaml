@@ -1,0 +1,4 @@
+transaction_statistics:
+  graph_options:
+    barmode_default: 'group'
+    text_auto_default: False

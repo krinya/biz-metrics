@@ -1,10 +1,14 @@
-# 🌀 Spiral template
+# Biz Metrics
+A tool to analyze customer and sales data for a business, such as a retail stores, e-commerce, or any business that sells products or services.
 
-A simple Streamlit app that draws a spiral. 
+## Link
+[https://biz-metrics.streamlit.app/](https://biz-metrics.streamlit.app/)
 
-[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://basic-template.streamlit.app/)
+## Features
+(under development)
 
-### How to run it on your own machine
+
+## How to run it on your own machine
 
 1. Install the requirements
 
