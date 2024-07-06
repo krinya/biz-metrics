@@ -1,4 +1,12 @@
+general:
+  developer_mode: True
+
 transaction_statistics:
+  developer_mode: False
   graph_options:
     barmode_default: 'group'
     text_auto_default: False
+
+user_statistics:
+  developer_mode: False
+  lookback_days_default: 90

@@ -5,23 +5,21 @@ import plotly.express as px
 
 from utils.pages_and_titles import *
 from utils.read_config import *
+from utils.import_data_functions import *
 
 # read the config file
 config_all = read_config()
+general = read_config(section = 'general')
 ts_cf = read_config(section = 'transaction_statistics')
 
 st.title("Transaction Statistics")
 st.markdown("Here you can see some statistics about transactions.")
 
-def check_if_date_is_loaded():
-    if 'transaction_maped_dataset' not in st.session_state:
-        st.error("Please select, import data and map the columns first on the import page.")
-        st.stop()
-
 check_if_date_is_loaded()
 
-# st.markdown("## Raw Data")
-# st.dataframe(st.session_state.transaction_maped_dataset, use_container_width=True, hide_index=True)
+if ts_cf['developer_mode']:
+    st.markdown("## transaction_maped_dataset - Raw Data")
+    st.dataframe(st.session_state.transaction_maped_dataset, use_container_width=True, hide_index=True)
 
 col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
 with col1:
