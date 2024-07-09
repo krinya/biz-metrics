@@ -7,6 +7,17 @@ transaction_statistics:
     barmode_default: 'group'
     text_auto_default: False
 
-user_statistics:
+single_user_view:
   developer_mode: False
-  lookback_days_default: 90
+  user_id_default: 27345
+
+user_statistics:
+  developer_mode: True
+  lookback_days_default: 180
+  show_cummulative_users_default: False
+  show_lookback_users_default: False
+  show_user_types_default: False
+  lookback_days_1_default: 90
+  lookback_days_2_default: 180
+  churning_days_default: 120
+  triangles_aggregation_default: 'quarter'

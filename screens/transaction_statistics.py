@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
+from streamlit_option_menu import option_menu
 
 from utils.pages_and_titles import *
 from utils.read_config import *
@@ -74,6 +75,7 @@ if st.session_state.filter_transaction_data_clicked == 1:
 if 'transaction_maped_dataset_filtered' not in st.session_state:
     st.session_state.transaction_maped_dataset_filtered = st.session_state.transaction_maped_dataset
 
+@st.cache_resource
 def transaction_time_series_by_segment(data, x_column, barmode_option='group', text_auto=True):
 
     if x_column == 'total':
@@ -96,6 +98,7 @@ def transaction_time_series_by_segment(data, x_column, barmode_option='group', t
 
     return fig_quantity, fig_revenue
 
+@st.cache_resource
 def transaction_time_series_total(data, x_column, barmode_option='group', text_auto=True):
 
     if x_column == 'total':
@@ -119,11 +122,18 @@ def transaction_time_series_total(data, x_column, barmode_option='group', text_a
 
     return fig_quantity, fig_revenue
 
-tab1, tab2, tab3, tab4, tab5 = st.tabs(["Total", "Daily", "Weekly", "Monthly", "Yearly"])
+#tab1, tab2, tab3, tab4, tab5 = st.tabs(["Total", "Daily", "Weekly", "Monthly", "Yearly"])
+ts_option_default = option_menu("Aggregation Level", options=["Total", "Daily", "Weekly", "Monthly", "Yearly"], default_index=2, key='time_series_option', orientation='horizontal')
+if st.session_state.time_series_option is None:
+    st.session_state.time_series_option_selected = ts_option_default
+else:
+    st.session_state.time_series_option_selected = st.session_state.time_series_option
+st.write(f"Selected option: {st.session_state.time_series_option_selected}")
 
 custom_theme = None
 
-with tab1:
+if st.session_state.time_series_option_selected == "Total":
+    
     st.markdown("## Total")
     st.write("Here you can see the total number of transactions.")
     total_total_q_plot, total_total_r_plot = transaction_time_series_total(st.session_state.transaction_maped_dataset_filtered, 'total', barmode_option=st.session_state.groping_plot_option, text_auto=st.session_state.text_auto_option)
@@ -137,7 +147,7 @@ with tab1:
     st.markdown("### Total Revenue by Segment")
     st.plotly_chart(total_segment_r_plot, theme=custom_theme)
 
-with tab2:
+if st.session_state.time_series_option_selected == "Daily":
     st.markdown("## Daily")
     st.write("Here you can see the daily number of transactions.")
     daily_total_q_plot, daily_total_r_plot = transaction_time_series_total(st.session_state.transaction_maped_dataset_filtered, 'transaction_date', barmode_option=st.session_state.groping_plot_option, text_auto=st.session_state.text_auto_option)
@@ -151,7 +161,7 @@ with tab2:
     st.markdown("### Daily Revenue by Segment")
     st.plotly_chart(daily_segment_r_plot, theme=custom_theme)
 
-with tab3:
+if st.session_state.time_series_option_selected == "Weekly":
     st.markdown("## Weekly")
     st.write("Here you can see the weekly number of transactions.")
     weekly_total_q_plot, weekly_total_r_plot = transaction_time_series_total(st.session_state.transaction_maped_dataset_filtered, 'transaction_week_date', barmode_option=st.session_state.groping_plot_option, text_auto=st.session_state.text_auto_option)
@@ -165,7 +175,7 @@ with tab3:
     st.markdown("### Weekly Revenue by Segment")
     st.plotly_chart(weekly_segment_r_plot, theme=custom_theme)
 
-with tab4:
+if st.session_state.time_series_option_selected == "Monthly":
     st.markdown("## Monthly")
     st.write("Here you can see the monthly number of transactions.")
     monthly_total_q_plot, monthly_total_r_plot = transaction_time_series_total(st.session_state.transaction_maped_dataset_filtered, 'transaction_month_date', barmode_option=st.session_state.groping_plot_option, text_auto=st.session_state.text_auto_option)
@@ -179,7 +189,7 @@ with tab4:
     st.markdown("### Monthly Revenue by Segment")
     st.plotly_chart(monthly_segment_r_plot, theme=custom_theme)
 
-with tab5:
+if st.session_state.time_series_option_selected == "Yearly":
     st.markdown("## Yearly")
     st.write("Here you can see the yearly number of transactions.")
     yearly_total_q_plot, yearly_total_r_plot = transaction_time_series_total(st.session_state.transaction_maped_dataset_filtered, 'transaction_year_date', barmode_option=st.session_state.groping_plot_option, text_auto=st.session_state.text_auto_option)
