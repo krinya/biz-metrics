@@ -105,21 +105,17 @@ def calculating_user_types(data, aggg_level = 'day', lookback_periods = [30, 60]
         date_plus_churning_period_date = pd.Timestamp(date_plus_churning_period).date()
         # st.write(f"Date: {date}, Lookback period 2: {lookback_period_2_date}, Lookback period 1: {lookback_period_1_date}, Churning period: {date_plus_churning_period}")
 
-        empty_space.write("1")
         df_before_lookback_period = data[data['transaction_date_time'] < lookback_period_2_date]
-        empty_space.write("2")
+        
         df_lookback_period_12 = data[(data['transaction_date_time'] >= lookback_period_2_date) & (data['transaction_date_time'] <= date)]
-        empty_space.write("3")
         df_lookback_period_1 = data[(data['transaction_date_time'] >= lookback_period_2_date) & (data['transaction_date_time'] <= lookback_period_1_date)]
         df_lookback_period_2 = data[(data['transaction_date_time'] >= lookback_period_1_date) & (data['transaction_date_time'] <= date)]
-        empty_space.write("4")
         df_churning_period = data[(data['transaction_date_time'] > date) & (data['transaction_date_time'] <= date_plus_churning_period)]
         df_churning_period_min_by_user = df_churning_period.groupby('user_id').agg(
             transaction_date_time = ('transaction_date_time', 'min')
         ).reset_index()
 
         # filter for the churning period where the churning_date is less than the date_plus_churning_period
-        empty_space.write("5")
         df_churning_period_90 = pd.merge(df_lookback_period_12,
                                          df_churning_period_min_by_user[['user_id', 'transaction_date_time']].rename(columns={'transaction_date_time': 'transaction_date_time_churning'}),
                                          on='user_id', how='inner')
@@ -127,7 +123,6 @@ def calculating_user_types(data, aggg_level = 'day', lookback_periods = [30, 60]
         df_churning_period_90['day_difference_churning'] = (df_churning_period_90['transaction_date_time_churning'] - df_churning_period_90['transaction_date_time']).dt.days
         # keep only the rows where the day_difference_churning is less than churning_period
         df_churning_period_90 = df_churning_period_90[df_churning_period_90['day_difference_churning'] <= churning_period]
-        empty_space.write("6")
         # calculate:
         # - new_users: only present in the lookback period 2 and not in lookback period 1 and not before
         # - returnin_users: present in the lookback period 1 and 2
@@ -352,8 +347,6 @@ def plot_triangles_heatmap(data, type = 'normal', error = False):
     data_copy = data.copy()
     text_data = data_copy.iloc[:, 1:]
     values_data = data_copy.iloc[:, 1:]
-
-    st.write(data_copy.dtypes)
 
     if error == True:
         if 'percent':
@@ -595,17 +588,18 @@ if st.session_state.show_user_types_data:
 st.markdown("## Sales Triangles")
 st.markdown("The sales triangles show the number of transactions for each user in a given period.")
 
-st.markdown("### Base Data")
-st.dataframe(st.session_state.user_sales_triangles_base, use_container_width=True, hide_index=True)
+# if developer mode:
+if us_cf['developer_mode']:
+    st.markdown("### Base Data")
+    st.dataframe(st.session_state.user_sales_triangles_base, use_container_width=True, hide_index=True)
 
-st.markdown("### Calculated Data")
-st.dataframe(st.session_state.user_sales_triangles_calculated, use_container_width=True, hide_index=True)
+    st.markdown("### Calculated Data")
+    st.dataframe(st.session_state.user_sales_triangles_calculated, use_container_width=True, hide_index=True)
 
 st.markdown("### Users Wide Data")
 st.dataframe(st.session_state.users_triangles_count_wide, use_container_width=True, hide_index=True)
 st.markdown("### Users Wide Data - Heatmap")
 fig_heatmap = plot_triangles_heatmap(st.session_state.users_triangles_count_wide)
-st.write(fig_heatmap)
 st.plotly_chart(fig_heatmap, use_container_width=True, theme=None, height=800)
 
 st.markdown("### Users Wide Data - Percentage")

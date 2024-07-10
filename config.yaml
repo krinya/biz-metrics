@@ -12,7 +12,7 @@ single_user_view:
   user_id_default: 27345
 
 user_statistics:
-  developer_mode: True
+  developer_mode: False
   lookback_days_default: 180
   show_cummulative_users_default: False
   show_lookback_users_default: False
