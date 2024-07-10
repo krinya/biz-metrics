@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
+import time
 
 from utils.pages_and_titles import *
 from utils.read_config import *
@@ -89,6 +90,8 @@ def calculating_user_types(data, aggg_level = 'day', lookback_periods = [30, 60]
     # create an empty dataframe where we will store the results
     user_types_df = pd.DataFrame()
 
+    empty_space = st.empty()
+
     i = 0
     for date in date_range:
 
@@ -102,20 +105,29 @@ def calculating_user_types(data, aggg_level = 'day', lookback_periods = [30, 60]
         date_plus_churning_period_date = pd.Timestamp(date_plus_churning_period).date()
         # st.write(f"Date: {date}, Lookback period 2: {lookback_period_2_date}, Lookback period 1: {lookback_period_1_date}, Churning period: {date_plus_churning_period}")
 
+        empty_space.write("1")
         df_before_lookback_period = data[data['transaction_date_time'] < lookback_period_2_date]
+        empty_space.write("2")
         df_lookback_period_12 = data[(data['transaction_date_time'] >= lookback_period_2_date) & (data['transaction_date_time'] <= date)]
+        empty_space.write("3")
         df_lookback_period_1 = data[(data['transaction_date_time'] >= lookback_period_2_date) & (data['transaction_date_time'] <= lookback_period_1_date)]
         df_lookback_period_2 = data[(data['transaction_date_time'] >= lookback_period_1_date) & (data['transaction_date_time'] <= date)]
+        empty_space.write("4")
         df_churning_period = data[(data['transaction_date_time'] > date) & (data['transaction_date_time'] <= date_plus_churning_period)]
+        df_churning_period_min_by_user = df_churning_period.groupby('user_id').agg(
+            transaction_date_time = ('transaction_date_time', 'min')
+        ).reset_index()
+
         # filter for the churning period where the churning_date is less than the date_plus_churning_period
+        empty_space.write("5")
         df_churning_period_90 = pd.merge(df_lookback_period_12,
-                                         df_churning_period[['user_id', 'transaction_date_time']].rename(columns={'transaction_date_time': 'transaction_date_time_churning'}),
+                                         df_churning_period_min_by_user[['user_id', 'transaction_date_time']].rename(columns={'transaction_date_time': 'transaction_date_time_churning'}),
                                          on='user_id', how='inner')
         # calculate day difference between the transaction_date and the transaction_date_churning
         df_churning_period_90['day_difference_churning'] = (df_churning_period_90['transaction_date_time_churning'] - df_churning_period_90['transaction_date_time']).dt.days
         # keep only the rows where the day_difference_churning is less than churning_period
         df_churning_period_90 = df_churning_period_90[df_churning_period_90['day_difference_churning'] <= churning_period]
-
+        empty_space.write("6")
         # calculate:
         # - new_users: only present in the lookback period 2 and not in lookback period 1 and not before
         # - returnin_users: present in the lookback period 1 and 2
@@ -332,23 +344,38 @@ def sales_triangles_calculation(data, aggregation_level = 'day'):
 
     return user_summary_base, user_summary_per_total, users_triangles_count_wide, users_triangles_percentage_wide, transactions_triangles_count_wide, transactions_triangles_percentage_wide, sales_triangles_count_wide, sales_triangles_percentage_wide
 
-def plot_triangles_heatmap(data, type = 'normal'):
+def plot_triangles_heatmap(data, type = 'normal', error = False):
     '''
     Plot a heatmap of the sales triangles
     type: 'normal' or 'percentage' or 'integer'
     '''
     data_copy = data.copy()
-    # fill na values with 0
+    text_data = data_copy.iloc[:, 1:]
+    values_data = data_copy.iloc[:, 1:]
+
+    st.write(data_copy.dtypes)
+
+    if error == True:
+        if 'percent':
+            data_copy = data_copy.fillna(-0.01)
+            text_data = text_data.fillna(-0.01)
+            values_data = values_data.fillna(-0.01)
+
+        else:
+            data_copy = data_copy.fillna(-1)
+            text_data = text_data.fillna(-1)
+            values_data = values_data.fillna(-1)
+        a = 1
 
     if type == 'normal':
         texttemplate = "%{text}"
         textfont_size = 10
     
     if type == 'percentage':
-        data_copy.iloc[:, 1:] = data_copy.iloc[:, 1:] * 100
-        data_copy.iloc[:, 1:] = data_copy.iloc[:, 1:].round(0)
+        text_data = text_data * 100
+        text_data = text_data.round(0)
         # convert it to float
-        data_copy.iloc[:, 1:] = data_copy.iloc[:, 1:].astype(float)
+        text_data = text_data.astype(float)
         #data.iloc[:, 1:] = data.iloc[:, 1:].astype(int)
         # textemplate for plotly add the % sign where it is non NA
         texttemplate = "%{text}%"
@@ -356,17 +383,20 @@ def plot_triangles_heatmap(data, type = 'normal'):
 
     if type == 'integer':
         # convert nan to 0
-        data_copy = data_copy.fillna(-123456789)
-        data_copy.iloc[:, 1:] = data_copy.iloc[:, 1:].round(0)
-        data_copy.iloc[:, 1:] = data_copy.iloc[:, 1:].astype(int)
-        # convert -123456789 to nan
-        data_copy = data_copy.replace(-123456789, np.nan)
+        text_data = text_data.fillna(-1)
+        text_data = text_data.round(0)
+        # convert it to integer
+        text_data = text_data.astype(int)
+
+        values_data = values_data.fillna(-1)
+        values_data = values_data.round(0)
+        # convert it to integer
+        values_data = values_data.astype(int)
         
         texttemplate = "%{text}"
         textfont_size = 10
-
-    # convert nan to 0
-    data_copy = data_copy.fillna("")
+        st.dataframe(text_data, use_container_width=True, hide_index=True)
+    
 
     x_unique = data_copy.columns[1:]
     # convert x_unique to string and create a list
@@ -378,14 +408,23 @@ def plot_triangles_heatmap(data, type = 'normal'):
 
     # st.markdown("We are plotting this data")
     # st.dataframe(data_copy, use_container_width=True, hide_index=True)
+
+    colorscale_to_use = [
+        [0, "rgb(255, 255, 255)"],
+        [0.01, "rgb(245, 230, 100)"],
+        [0.05, "rgb(245, 234, 110)"],
+        [0.1, "rgb(40, 191, 63)"],
+        [1.0, "rgb(12, 71, 28)"]
+    ]
     
     fig = go.Figure(data=go.Heatmap(
-            z=data_copy.iloc[:, 1:],
+            z=values_data,
             x=x_unique,
             y=y_unique,
             hoverongaps=True,
+            colorscale=colorscale_to_use,
             # show text on graph
-            text=data_copy.iloc[:, 1:],
+            text=text_data,
             texttemplate=texttemplate,
             textfont={"size": textfont_size}
     ))
@@ -393,6 +432,7 @@ def plot_triangles_heatmap(data, type = 'normal'):
     fig.update_yaxes(title_text='Period Start')
     fig.update_xaxes(title_text='Period Number')
     # show all values on x axis
+
     fig.update_xaxes(tickmode='array', tickvals=x_unique, ticktext=x_unique)
     # show text on graph
 
@@ -565,6 +605,7 @@ st.markdown("### Users Wide Data")
 st.dataframe(st.session_state.users_triangles_count_wide, use_container_width=True, hide_index=True)
 st.markdown("### Users Wide Data - Heatmap")
 fig_heatmap = plot_triangles_heatmap(st.session_state.users_triangles_count_wide)
+st.write(fig_heatmap)
 st.plotly_chart(fig_heatmap, use_container_width=True, theme=None, height=800)
 
 st.markdown("### Users Wide Data - Percentage")
@@ -589,11 +630,10 @@ st.markdown("### Sales Wide Data")
 st.dataframe(st.session_state.sales_triangles_count_wide, use_container_width=True, hide_index=True)
 st.markdown("### Sales Wide Data - Heatmap")
 fig_heatmap_sales_count = plot_triangles_heatmap(st.session_state.sales_triangles_count_wide, type='integer')
-st.write(fig_heatmap_sales_count)
 st.plotly_chart(fig_heatmap_sales_count, use_container_width=True, theme=None, height=800)
 
 st.markdown("### Sales Wide Data - Percentage")
 st.dataframe(st.session_state.sales_triangles_percentage_wide, use_container_width=True, hide_index=True)
 st.markdown("### Sales Wide Data - Percentage - Heatmap")
-fig_heatmap_sales_percentage = plot_triangles_heatmap(st.session_state.sales_triangles_percentage_wide, type='percentage')
+fig_heatmap_sales_percentage = plot_triangles_heatmap(st.session_state.sales_triangles_percentage_wide, type='percentage', error=True)
 st.plotly_chart(fig_heatmap_sales_percentage, use_container_width=True, theme=None, height=800)

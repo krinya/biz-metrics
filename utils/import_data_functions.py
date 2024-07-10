@@ -21,7 +21,7 @@ def load_sample_data(data):
         st.session_state.sales_value_column_selected = sales_value_column_defualt
         segment_column_defualt = ['Segment', 'City']
         st.session_state.segment_column_selected = segment_column_defualt
-        create_maped_dataset(st.session_state.dataset2)
+        create_maped_dataset(st.session_state.dataset2, date_format='%d/%m/%Y')
 
 
 def check_if_date_is_loaded():
@@ -58,7 +58,7 @@ def import_data_3():
     return st.session_state.dataset3, st.session_state.dataset3_shape
 
 
-def create_maped_dataset(dataset):
+def create_maped_dataset(dataset, **kwargs):
         
         user_id_column = st.session_state.user_id_column_selected
         invoice_id_column = st.session_state.transaction_id_column_selected
@@ -85,11 +85,20 @@ def create_maped_dataset(dataset):
                 st.session_state.transaction_maped_dataset['invoice_id'] = st.session_state.transaction_maped_dataset['invoice_id'].astype(str)
 
             if transaction_date_column != 'No column is selected':
+
+                if kwargs['date_format'] is not None:
+                    date_format = kwargs['date_format']
+                else:
+                    date_format = None
+
+                st.session_state.transaction_maped_dataset['original_date_time'] = dataset[transaction_date_column]
                 st.session_state.transaction_maped_dataset['transaction_date_time'] = dataset[transaction_date_column]
+
                 # convert it to datetime
-                st.session_state.transaction_maped_dataset['transaction_date_time'] = pd.to_datetime(st.session_state.transaction_maped_dataset['transaction_date_time'], errors='coerce')
+                st.session_state.transaction_maped_dataset['transaction_date_time'] = pd.to_datetime(st.session_state.transaction_maped_dataset['transaction_date_time'], errors='coerce', format=date_format)
                 # convert it to date
                 st.session_state.transaction_maped_dataset['transaction_date'] = st.session_state.transaction_maped_dataset['transaction_date_time'].dt.date
+
                 # convert it to date week start date
                 st.session_state.transaction_maped_dataset['transaction_week_date'] = st.session_state.transaction_maped_dataset['transaction_date_time'].dt.to_period('W').apply(lambda r: r.start_time.date())
                 # convert it to date month start date

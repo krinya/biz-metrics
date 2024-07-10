@@ -179,7 +179,11 @@ if 'selected_raw_data' in st.session_state:
 
     # create the mapped dataset using a button
     if st.button("Create Mapped Dataset"):
-        create_maped_dataset(st.session_state.selected_raw_data)
+        if st.session_state.dataset_name == 'dataset2':
+            data_format_input = "%d/%m/%Y"
+        else:
+            data_format_input = None
+        create_maped_dataset(st.session_state.selected_raw_data, date_format=data_format_input)
         st.success("Mapped dataset has been created. You can see it below.")
         st.session_state.transaction_maped_dataset_shape = st.session_state.transaction_maped_dataset.shape
     
