@@ -21,3 +21,5 @@ user_statistics:
   lookback_days_2_default: 180
   churning_days_default: 120
   triangles_aggregation_default: 'quarter'
+  show_sales_trinangles_data_default: False
+  show_sales_tringales_graph_default: True

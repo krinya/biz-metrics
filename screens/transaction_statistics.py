@@ -6,7 +6,9 @@ from streamlit_option_menu import option_menu
 
 from utils.pages_and_titles import *
 from utils.read_config import *
+from utils.create_filter_defaul_values import *
 from utils.import_data_functions import *
+
 
 # read the config file
 config_all = read_config()
@@ -16,7 +18,7 @@ ts_cf = read_config(section = 'transaction_statistics')
 st.title("Transaction Statistics")
 st.markdown("Here you can see some statistics about transactions.")
 
-check_if_date_is_loaded()
+st.session_state.transaction_maped_dataset = check_if_data_is_loaded(get_session_id())
 
 if ts_cf['developer_mode']:
     st.markdown("## transaction_maped_dataset - Raw Data")
@@ -26,26 +28,25 @@ col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
 with col1:
     # filter for segment
     # create a list of unique values
-    if 'segment_list_all' not in st.session_state:
-        segment_list = st.session_state.transaction_maped_dataset['segment'].unique()
-        # add an 'All' option
-        segment_list = np.insert(segment_list, 0, 'All')
-        st.session_state.segment_list_all = segment_list
+    st.session_state.segment_list_all = get_segment_default_values(st.session_state.transaction_maped_dataset, get_session_id())
     # create a multi-select dropdown
     st.multiselect('Select Segment', st.session_state.segment_list_all, default=['All'], key='segment_filter_transactions')
 
-col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
-with col1:
-    # select grouping for barchart
-    barmode_option = ['group', 'overlay', 'relative']
-    barmode_default = ts_cf['graph_options']['barmode_default']
-    st.selectbox('Select barmode for barchart', barmode_option, key='groping_plot_option', index=barmode_option.index(barmode_default))
+# col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
+sidebar = st.sidebar
+with st.sidebar:
+    with st.popover("Graph options", use_container_width=True):
 
-with col2:
-    # select True or False for text_auto
-    text_auto_option = [True, False]
-    text_auto_default = ts_cf['graph_options']['text_auto_default']
-    st.selectbox('Select text_auto for barchart', text_auto_option, key='text_auto_option', index=text_auto_option.index(text_auto_default))
+        # select grouping for barchart
+        barmode_option = ['group', 'overlay', 'relative']
+        barmode_default = ts_cf['graph_options']['barmode_default']
+        st.selectbox('Select barmode for barchart', barmode_option, key='groping_plot_option', index=barmode_option.index(barmode_default))
+
+
+        # select True or False for text_auto
+        text_auto_option = [True, False]
+        text_auto_default = ts_cf['graph_options']['text_auto_default']
+        st.selectbox('Select text_auto for barchart', text_auto_option, key='text_auto_option', index=text_auto_option.index(text_auto_default))
 
 def filter_transaction_data(data, segment_filter):
 
@@ -67,7 +68,6 @@ def filter_transaction_data_button_click():
 st.button('Filter Data', key='filter_data_button', on_click=filter_transaction_data_button_click)
 
 if st.session_state.filter_transaction_data_clicked == 1:
-    st.markdown("Button clicked")
     with st.spinner('Filtering data...'):
         st.session_state.transaction_maped_dataset_filtered = filter_transaction_data(st.session_state.transaction_maped_dataset, st.session_state.segment_filter_transactions)
     st.session_state.filter_transaction_data_clicked = 0
@@ -122,85 +122,112 @@ def transaction_time_series_total(data, x_column, barmode_option='group', text_a
 
     return fig_quantity, fig_revenue
 
-#tab1, tab2, tab3, tab4, tab5 = st.tabs(["Total", "Daily", "Weekly", "Monthly", "Yearly"])
-ts_option_default = option_menu("Aggregation Level", options=["Total", "Daily", "Weekly", "Monthly", "Yearly"], default_index=2, key='time_series_option', orientation='horizontal')
-if st.session_state.time_series_option is None:
-    st.session_state.time_series_option_selected = ts_option_default
-else:
+# check if the time_series_option_selected is in session state or is none
+if 'time_series_option_selected' not in st.session_state or st.session_state.time_series_option_selected is None:
+    st.session_state.time_series_option_selected = 'Monthly'
+elif 'time_series_option' in st.session_state:
     st.session_state.time_series_option_selected = st.session_state.time_series_option
-st.write(f"Selected option: {st.session_state.time_series_option_selected}")
+else:
+    st.session_state.time_series_option_selected = 'Monthly'
 
-custom_theme = None
+st.markdown("## Aggregation Level")
+options_list = ["Total", "Daily", "Weekly", "Monthly", "Yearly"]
+ts_option_default = st.radio("Aggregation Level", options=options_list, label_visibility='collapsed',
+                                index= options_list.index(st.session_state.time_series_option_selected), 
+                                key='time_series_option', horizontal=True)
+st.session_state.time_series_option_selected = ts_option_default
+
+selectedTheme = None
 
 if st.session_state.time_series_option_selected == "Total":
     
     st.markdown("## Total")
     st.write("Here you can see the total number of transactions.")
-    total_total_q_plot, total_total_r_plot = transaction_time_series_total(st.session_state.transaction_maped_dataset_filtered, 'total', barmode_option=st.session_state.groping_plot_option, text_auto=st.session_state.text_auto_option)
+    total_total_q_plot, total_total_r_plot = transaction_time_series_total(
+        st.session_state.transaction_maped_dataset_filtered, 'total', 
+        barmode_option=st.session_state.groping_plot_option, text_auto=st.session_state.text_auto_option)
     st.markdown("### Total Quantity")
-    st.plotly_chart(total_total_q_plot, theme=custom_theme)
+    st.plotly_chart(total_total_q_plot, theme=selectedTheme)
     st.markdown("### Total Revenue")
-    st.plotly_chart(total_total_r_plot, theme=custom_theme)
-    total_segment_q_plot, total_segment_r_plot = transaction_time_series_by_segment(st.session_state.transaction_maped_dataset_filtered, 'total', barmode_option=st.session_state.groping_plot_option, text_auto=st.session_state.text_auto_option)
+    st.plotly_chart(total_total_r_plot, theme=selectedTheme)
+    total_segment_q_plot, total_segment_r_plot = transaction_time_series_by_segment(
+        st.session_state.transaction_maped_dataset_filtered, 'total',
+        barmode_option=st.session_state.groping_plot_option, text_auto=st.session_state.text_auto_option)
     st.markdown("### Total Quantity by Segment")
-    st.plotly_chart(total_segment_q_plot, theme=custom_theme)
+    st.plotly_chart(total_segment_q_plot, theme=selectedTheme)
     st.markdown("### Total Revenue by Segment")
-    st.plotly_chart(total_segment_r_plot, theme=custom_theme)
+    st.plotly_chart(total_segment_r_plot, theme=selectedTheme)
 
 if st.session_state.time_series_option_selected == "Daily":
     st.markdown("## Daily")
     st.write("Here you can see the daily number of transactions.")
-    daily_total_q_plot, daily_total_r_plot = transaction_time_series_total(st.session_state.transaction_maped_dataset_filtered, 'transaction_date', barmode_option=st.session_state.groping_plot_option, text_auto=st.session_state.text_auto_option)
+    daily_total_q_plot, daily_total_r_plot = transaction_time_series_total(
+        st.session_state.transaction_maped_dataset_filtered, 'transaction_date', 
+        barmode_option=st.session_state.groping_plot_option, text_auto=st.session_state.text_auto_option)
     st.markdown("### Daily Quantity")
-    st.plotly_chart(daily_total_q_plot, theme=custom_theme)
+    st.plotly_chart(daily_total_q_plot, theme=selectedTheme)
     st.markdown("### Daily Revenue")
-    st.plotly_chart(daily_total_r_plot, theme=custom_theme)
-    daily_segment_q_plot, daily_segment_r_plot = transaction_time_series_by_segment(st.session_state.transaction_maped_dataset_filtered, 'transaction_date', barmode_option=st.session_state.groping_plot_option, text_auto=st.session_state.text_auto_option)
+    st.plotly_chart(daily_total_r_plot, theme=selectedTheme)
+    daily_segment_q_plot, daily_segment_r_plot = transaction_time_series_by_segment(
+        st.session_state.transaction_maped_dataset_filtered, 'transaction_date', 
+        barmode_option=st.session_state.groping_plot_option, text_auto=st.session_state.text_auto_option)
     st.markdown("### Daily Quantity by Segment")
-    st.plotly_chart(daily_segment_q_plot, theme=custom_theme)
+    st.plotly_chart(daily_segment_q_plot, theme=selectedTheme)
     st.markdown("### Daily Revenue by Segment")
-    st.plotly_chart(daily_segment_r_plot, theme=custom_theme)
+    st.plotly_chart(daily_segment_r_plot, theme=selectedTheme)
 
 if st.session_state.time_series_option_selected == "Weekly":
     st.markdown("## Weekly")
     st.write("Here you can see the weekly number of transactions.")
-    weekly_total_q_plot, weekly_total_r_plot = transaction_time_series_total(st.session_state.transaction_maped_dataset_filtered, 'transaction_week_date', barmode_option=st.session_state.groping_plot_option, text_auto=st.session_state.text_auto_option)
+    weekly_total_q_plot, weekly_total_r_plot = transaction_time_series_total(
+        st.session_state.transaction_maped_dataset_filtered, 'transaction_week_date',
+        barmode_option=st.session_state.groping_plot_option, text_auto=st.session_state.text_auto_option)
     st.markdown("### Weekly Quantity")
-    st.plotly_chart(weekly_total_q_plot, theme=custom_theme)
+    st.plotly_chart(weekly_total_q_plot, theme=selectedTheme)
     st.markdown("### Weekly Revenue")
-    st.plotly_chart(weekly_total_r_plot, theme=custom_theme)
-    weekly_segment_q_plot, weekly_segment_r_plot = transaction_time_series_by_segment(st.session_state.transaction_maped_dataset_filtered, 'transaction_week_date', barmode_option=st.session_state.groping_plot_option, text_auto=st.session_state.text_auto_option)
+    st.plotly_chart(weekly_total_r_plot, theme=selectedTheme)
+    weekly_segment_q_plot, weekly_segment_r_plot = transaction_time_series_by_segment(
+        st.session_state.transaction_maped_dataset_filtered, 'transaction_week_date',
+        barmode_option=st.session_state.groping_plot_option, text_auto=st.session_state.text_auto_option)
     st.markdown("### Weekly Quantity by Segment")
-    st.plotly_chart(weekly_segment_q_plot, theme=custom_theme)
+    st.plotly_chart(weekly_segment_q_plot, theme=selectedTheme)
     st.markdown("### Weekly Revenue by Segment")
-    st.plotly_chart(weekly_segment_r_plot, theme=custom_theme)
+    st.plotly_chart(weekly_segment_r_plot, theme=selectedTheme)
 
 if st.session_state.time_series_option_selected == "Monthly":
     st.markdown("## Monthly")
     st.write("Here you can see the monthly number of transactions.")
-    monthly_total_q_plot, monthly_total_r_plot = transaction_time_series_total(st.session_state.transaction_maped_dataset_filtered, 'transaction_month_date', barmode_option=st.session_state.groping_plot_option, text_auto=st.session_state.text_auto_option)
+    monthly_total_q_plot, monthly_total_r_plot = transaction_time_series_total(
+        st.session_state.transaction_maped_dataset_filtered, 'transaction_month_date',
+        barmode_option=st.session_state.groping_plot_option, text_auto=st.session_state.text_auto_option)
     st.markdown("### Monthly Quantity")
-    st.plotly_chart(monthly_total_q_plot, theme=custom_theme)
+    st.plotly_chart(monthly_total_q_plot, theme=selectedTheme)
     st.markdown("### Monthly Revenue")
-    st.plotly_chart(monthly_total_r_plot, theme=custom_theme)
-    monthly_segment_q_plot, monthly_segment_r_plot = transaction_time_series_by_segment(st.session_state.transaction_maped_dataset_filtered, 'transaction_month_date', barmode_option=st.session_state.groping_plot_option, text_auto=st.session_state.text_auto_option)
+    st.plotly_chart(monthly_total_r_plot, theme=selectedTheme)
+    monthly_segment_q_plot, monthly_segment_r_plot = transaction_time_series_by_segment(
+        st.session_state.transaction_maped_dataset_filtered, 'transaction_month_date',
+        barmode_option=st.session_state.groping_plot_option, text_auto=st.session_state.text_auto_option)
     st.markdown("### Monthly Quantity by Segment")
-    st.plotly_chart(monthly_segment_q_plot, theme=custom_theme)
+    st.plotly_chart(monthly_segment_q_plot, theme=selectedTheme)
     st.markdown("### Monthly Revenue by Segment")
-    st.plotly_chart(monthly_segment_r_plot, theme=custom_theme)
+    st.plotly_chart(monthly_segment_r_plot, theme=selectedTheme)
 
 if st.session_state.time_series_option_selected == "Yearly":
     st.markdown("## Yearly")
     st.write("Here you can see the yearly number of transactions.")
-    yearly_total_q_plot, yearly_total_r_plot = transaction_time_series_total(st.session_state.transaction_maped_dataset_filtered, 'transaction_year_date', barmode_option=st.session_state.groping_plot_option, text_auto=st.session_state.text_auto_option)
+    yearly_total_q_plot, yearly_total_r_plot = transaction_time_series_total(
+        st.session_state.transaction_maped_dataset_filtered, 'transaction_year_date',
+        barmode_option=st.session_state.groping_plot_option, text_auto=st.session_state.text_auto_option)
     st.markdown("### Yearly Quantity")
-    st.plotly_chart(yearly_total_q_plot, theme=custom_theme)
+    st.plotly_chart(yearly_total_q_plot, theme=selectedTheme)
     st.markdown("### Yearly Revenue")
-    st.plotly_chart(yearly_total_r_plot, theme=custom_theme)
-    yearly_segment_q_plot, yearly_segment_r_plot = transaction_time_series_by_segment(st.session_state.transaction_maped_dataset_filtered, 'transaction_year_date', barmode_option=st.session_state.groping_plot_option, text_auto=st.session_state.text_auto_option)
+    st.plotly_chart(yearly_total_r_plot, theme=selectedTheme)
+    yearly_segment_q_plot, yearly_segment_r_plot = transaction_time_series_by_segment(
+        st.session_state.transaction_maped_dataset_filtered, 'transaction_year_date',
+        barmode_option=st.session_state.groping_plot_option, text_auto=st.session_state.text_auto_option)
     st.markdown("### Yearly Quantity by Segment")
-    st.plotly_chart(yearly_segment_q_plot, theme=custom_theme)
+    st.plotly_chart(yearly_segment_q_plot, theme=selectedTheme)
     st.markdown("### Yearly Revenue by Segment")
-    st.plotly_chart(yearly_segment_r_plot, theme=custom_theme)
+    st.plotly_chart(yearly_segment_r_plot, theme=selectedTheme)
 
   

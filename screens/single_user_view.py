@@ -7,6 +7,7 @@ import plotly.graph_objects as go
 from utils.pages_and_titles import *
 from utils.read_config import *
 from utils.import_data_functions import *
+from utils.create_session_id import *
 
 # read the config file
 config_all = read_config()
@@ -16,10 +17,10 @@ sus_cf = read_config(section = 'single_user_view')
 st.title("Single User View")
 st.markdown("Here you can see some statistics about one users.")
 
-check_if_date_is_loaded()
+st.session_state.transaction_maped_dataset = check_if_data_is_loaded(get_session_id())
 
-@st.cache_data
-def calculate_all_the_user_data(transaction_data):
+@st.cache_resource(show_spinner="Calculating user metics. Please wait...")
+def calculate_all_the_user_data(transaction_data, session_id):
     '''
     Calculate user metrics by user:
     - number of transactions last 30 days
@@ -59,7 +60,7 @@ def calculate_all_the_user_data(transaction_data):
     return td_summary
 
 
-st.session_state.total_users_summary_data_raw = calculate_all_the_user_data(st.session_state.transaction_maped_dataset)
+st.session_state.total_users_summary_data_raw = calculate_all_the_user_data(st.session_state.transaction_maped_dataset, get_session_id())
 
 if sus_cf['developer_mode']:
     st.markdown("## transaction_maped_dataset - Raw Data")

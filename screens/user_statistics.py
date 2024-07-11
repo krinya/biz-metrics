@@ -3,21 +3,27 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
-import time
 
 from utils.pages_and_titles import *
 from utils.read_config import *
 from utils.import_data_functions import *
+from utils.create_session_id import *
+from utils.create_filter_defaul_values import *
 
 # read the config file
 config_all = read_config()
 general = read_config(section = 'general')
 us_cf = read_config(section = 'user_statistics')
+show_sales_triangles_data = us_cf['show_sales_trinangles_data_default']
+show_sales_triangels_graph = us_cf['show_sales_tringales_graph_default']
 
 st.title("User Statistics")
 st.markdown("Here you can see some statistics about the users.")
 
-check_if_date_is_loaded()
+st.session_state.transaction_maped_dataset = check_if_data_is_loaded(get_session_id())
+
+sidebar_empty_space = st.sidebar.empty()
+sidebar_empty_space.markdown(" ")
 
 if us_cf['developer_mode']:
     st.markdown("## transaction_maped_dataset - Raw Data")
@@ -32,8 +38,8 @@ def cummulative_users_calculation(data, aggregation_level = 'day', lookback = 30
 
     # create a date range with all the days between the min and max date
     date_range = pd.date_range(start=min_date, end=max_date, freq='D')
-
-    progress_bar_cummulative_users = st.progress(0, text='Calculating cummulative users... Please wait.')
+    with sidebar_empty_space:
+        progress_bar_cummulative_users = st.progress(0, text='Calculating cummulative users... Please wait.')
 
     # create a dataframe with the total unique users until that day who we interacted with
     cummulative_users_df = pd.DataFrame()
@@ -85,7 +91,8 @@ def calculating_user_types(data, aggg_level = 'day', lookback_periods = [30, 60]
     # create a date range with all the days between the min and max date
     date_range = pd.date_range(start=min_date, end=max_date, freq='D')
 
-    progress_bar_user_types = st.progress(0, text='Calculating user types... Please wait.')
+    with sidebar_empty_space:
+        progress_bar_user_types = st.progress(0, text='Calculating user types... Please wait.')
 
     # create an empty dataframe where we will store the results
     user_types_df = pd.DataFrame()
@@ -123,7 +130,8 @@ def calculating_user_types(data, aggg_level = 'day', lookback_periods = [30, 60]
         df_churning_period_90['day_difference_churning'] = (df_churning_period_90['transaction_date_time_churning'] - df_churning_period_90['transaction_date_time']).dt.days
         # keep only the rows where the day_difference_churning is less than churning_period
         df_churning_period_90 = df_churning_period_90[df_churning_period_90['day_difference_churning'] <= churning_period]
-        # calculate:
+        
+        # calculate user types:
         # - new_users: only present in the lookback period 2 and not in lookback period 1 and not before
         # - returnin_users: present in the lookback period 1 and 2
         # - rare_users: present in the lookback period 2 but not in the lookback period 1 and not new user
@@ -138,6 +146,7 @@ def calculating_user_types(data, aggg_level = 'day', lookback_periods = [30, 60]
         potentially_churning_users_df = df_lookback_period_1[~(df_lookback_period_1['user_id'].isin(df_lookback_period_2['user_id'])) & ~(df_lookback_period_1['user_id'].isin(new_users_df['user_id']))]
         potentially_churning_users_count = potentially_churning_users_df['user_id'].nunique()
 
+        # calculate churning users and churn rate for each user type
         new_user_churn_df = new_users_df[~new_users_df['user_id'].isin(df_churning_period_90['user_id'])]
         new_user_churn_count = new_user_churn_df['user_id'].nunique()
         returning_user_churn_df = returning_users_df[~returning_users_df['user_id'].isin(df_churning_period_90['user_id'])]
@@ -243,7 +252,7 @@ def sales_triangles_calculation(data, aggregation_level = 'day'):
         # order by period_start and period_end
         date_range = date_range.sort_values(by=['period_start', 'period'])
         # create a new column with the period number by period_start
-        date_range['period_number'] = date_range.groupby('period_start').cumcount() + 1
+        date_range['period_number'] = date_range.groupby('period_start').cumcount()
 
 
         # calcaulte first transaction date for each user
@@ -290,7 +299,7 @@ def sales_triangles_calculation(data, aggregation_level = 'day'):
         user_summary_per_total_combinations['transaction_ratio'] = user_summary_per_total_combinations['transaction_count'] / user_summary_per_total_combinations['transaction_count_first_transaction']
         user_summary_per_total_combinations['sales_ratio'] = user_summary_per_total_combinations['sales'] / user_summary_per_total_combinations['sales_first_transaction']
 
-        st.dataframe(user_summary_per_total_combinations, use_container_width=True, hide_index=True)
+        # st.dataframe(user_summary_per_total_combinations, use_container_width=True, hide_index=True)
 
         def diagonal_fill(data):
             '''
@@ -388,10 +397,10 @@ def plot_triangles_heatmap(data, type = 'normal', error = False):
         
         texttemplate = "%{text}"
         textfont_size = 10
-        st.dataframe(text_data, use_container_width=True, hide_index=True)
     
 
     x_unique = data_copy.columns[1:]
+    # subsctract 1 from each element
     # convert x_unique to string and create a list
     x_unique = x_unique.astype(str).tolist()
 
@@ -434,6 +443,9 @@ def plot_triangles_heatmap(data, type = 'normal', error = False):
                      tickvals=y_unique,
                      ticktext=y_unique, autorange="reversed")
     
+    # delete the space of the tile and subtitle of the plot
+    fig.update_layout(margin=dict(t=25, b=45))
+    
     # set height
     fig.update_layout(height=800)
     return fig
@@ -446,15 +458,8 @@ with col1:
     lookback_period = st.number_input("Lookback period in days", min_value=1, value=lookback_days_default, key='lookback_period_option')
     
 with col2:
-    # select segmentation and filter for it
-    @st.cache_resource
-    def get_segment_default_values(dataset):
-        segment_default_values = dataset['segment'].unique()
-        # add 'All' to the beginning of the list
-        segment_default_values = np.insert(segment_default_values, 0, 'All')
-        st.session_state.segment_default_values = segment_default_values
     # create multiselect for segment
-    get_segment_default_values(st.session_state.transaction_maped_dataset)
+    get_segment_default_values(st.session_state.transaction_maped_dataset, get_session_id())
     st.selectbox("Segment", st.session_state.segment_default_values, key='segment_option')
     # filter the data by segment
     if st.session_state.segment_option != 'All':
@@ -596,38 +601,54 @@ if us_cf['developer_mode']:
     st.markdown("### Calculated Data")
     st.dataframe(st.session_state.user_sales_triangles_calculated, use_container_width=True, hide_index=True)
 
-st.markdown("### Users Wide Data")
-st.dataframe(st.session_state.users_triangles_count_wide, use_container_width=True, hide_index=True)
-st.markdown("### Users Wide Data - Heatmap")
-fig_heatmap = plot_triangles_heatmap(st.session_state.users_triangles_count_wide)
-st.plotly_chart(fig_heatmap, use_container_width=True, theme=None, height=800)
+st.markdown("### Users")
+if show_sales_triangles_data:
+    st.markdown("#### User Count - Data")
+    st.dataframe(st.session_state.users_triangles_count_wide, use_container_width=True, hide_index=True)
+if show_sales_triangels_graph:
+    st.markdown("#### User Count - Heatmap")
+    fig_heatmap = plot_triangles_heatmap(st.session_state.users_triangles_count_wide)
+    st.plotly_chart(fig_heatmap, use_container_width=True, theme=None, height=800)
+if show_sales_triangles_data:
+    st.markdown("#### User Count (%) - Data")
+    st.dataframe(st.session_state.users_triangles_percentage_wide, use_container_width=True, hide_index=True)
+if show_sales_triangels_graph:
+    st.markdown("#### User Count (%) - Heatmap")
+    fig_heatmap_percentage = plot_triangles_heatmap(st.session_state.users_triangles_percentage_wide, type='percentage')
+    st.plotly_chart(fig_heatmap_percentage, use_container_width=True, theme=None, height=800)
 
-st.markdown("### Users Wide Data - Percentage")
-st.dataframe(st.session_state.users_triangles_percentage_wide, use_container_width=True, hide_index=True)
-st.markdown("### Users Wide Data - Percentage - Heatmap")
-fig_heatmap_percentage = plot_triangles_heatmap(st.session_state.users_triangles_percentage_wide, type='percentage')
-st.plotly_chart(fig_heatmap_percentage, use_container_width=True, theme=None, height=800)
+st.markdown("### Transactions")
+if show_sales_triangles_data:
+    st.markdown("#### Transaction Count - Data")
+    st.dataframe(st.session_state.transactions_triangles_count_wide, use_container_width=True, hide_index=True)
+if show_sales_triangels_graph:
+    st.markdown("#### Transaction Count - Heatmap")
+    fig_heatmap = plot_triangles_heatmap(st.session_state.transactions_triangles_count_wide)
+    st.plotly_chart(fig_heatmap, use_container_width=True, theme=None, height=800)
 
-st.markdown("### Transactions Wide Data")
-st.dataframe(st.session_state.transactions_triangles_count_wide, use_container_width=True, hide_index=True)
-st.markdown("### Transactions Wide Data - Heatmap")
-fig_heatmap = plot_triangles_heatmap(st.session_state.transactions_triangles_count_wide)
-st.plotly_chart(fig_heatmap, use_container_width=True, theme=None, height=800)
+if show_sales_triangles_data:
+    st.markdown("#### Transaction Count (%) - Data")
+    st.dataframe(st.session_state.transactions_triangles_percentage_wide, use_container_width=True, hide_index=True)
+if show_sales_triangels_graph:
+    st.markdown("#### Transaction Count (%) - Heatmap")
+    fig_heatmap_percentage = plot_triangles_heatmap(st.session_state.transactions_triangles_percentage_wide, type='percentage')
+    st.plotly_chart(fig_heatmap_percentage, use_container_width=True, theme=None, height=800)
 
-st.markdown("### Transactions Wide Data - Percentage")
-st.dataframe(st.session_state.transactions_triangles_percentage_wide, use_container_width=True, hide_index=True)
-st.markdown("### Transactions Wide Data - Percentage - Heatmap")
-fig_heatmap_percentage = plot_triangles_heatmap(st.session_state.transactions_triangles_percentage_wide, type='percentage')
-st.plotly_chart(fig_heatmap_percentage, use_container_width=True, theme=None, height=800)
+st.markdown("### Sales Value")
+if show_sales_triangles_data:
+    st.markdown("#### Sales Value - Data")
+    st.dataframe(st.session_state.sales_triangles_count_wide, use_container_width=True, hide_index=True)
+if show_sales_triangels_graph:
+    st.markdown("#### Sales Value - Heatmap")
+    fig_heatmap_sales_count = plot_triangles_heatmap(st.session_state.sales_triangles_count_wide, type='integer')
+    st.plotly_chart(fig_heatmap_sales_count, use_container_width=True, theme=None, height=800)
 
-st.markdown("### Sales Wide Data")
-st.dataframe(st.session_state.sales_triangles_count_wide, use_container_width=True, hide_index=True)
-st.markdown("### Sales Wide Data - Heatmap")
-fig_heatmap_sales_count = plot_triangles_heatmap(st.session_state.sales_triangles_count_wide, type='integer')
-st.plotly_chart(fig_heatmap_sales_count, use_container_width=True, theme=None, height=800)
+if show_sales_triangles_data:
+    st.markdown("#### Sales Value (%) - Data")
+    st.dataframe(st.session_state.sales_triangles_percentage_wide, use_container_width=True, hide_index=True)
+if show_sales_triangels_graph:
+    st.markdown("#### Sales Value (%) - Heatmap")
+    fig_heatmap_sales_percentage = plot_triangles_heatmap(st.session_state.sales_triangles_percentage_wide, type='percentage', error=True)
+    st.plotly_chart(fig_heatmap_sales_percentage, use_container_width=True, theme=None, height=800)
 
-st.markdown("### Sales Wide Data - Percentage")
-st.dataframe(st.session_state.sales_triangles_percentage_wide, use_container_width=True, hide_index=True)
-st.markdown("### Sales Wide Data - Percentage - Heatmap")
-fig_heatmap_sales_percentage = plot_triangles_heatmap(st.session_state.sales_triangles_percentage_wide, type='percentage', error=True)
-st.plotly_chart(fig_heatmap_sales_percentage, use_container_width=True, theme=None, height=800)
+sidebar_empty_space.markdown(" ")
