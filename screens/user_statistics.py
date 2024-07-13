@@ -9,6 +9,7 @@ from utils.read_config import *
 from utils.import_data_functions import *
 from utils.create_session_id import *
 from utils.create_filter_defaul_values import *
+from utils.filter_transaction import *
 
 # read the config file
 config_all = read_config()
@@ -450,23 +451,59 @@ def plot_triangles_heatmap(data, type = 'normal', error = False):
     fig.update_layout(height=800)
     return fig
 
+st.markdown("### Filters")
+col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
+with col1:
+    # filter for segment
+    # create a list of unique values
+    st.session_state.segment_list_all = get_segment_default_values(st.session_state.transaction_maped_dataset, get_session_id())
+    # create a multi-select dropdown
+    st.multiselect('Select Segment', st.session_state.segment_list_all, default=['All'], key='segment_filter_transactions')
+with col2:
+    st.date_input('Select Start Date', key='start_date_filter_transactions', value=st.session_state.transaction_maped_dataset['transaction_date'].min())
+with col3:
+    st.date_input('Select End Date', key='end_date_filter_transactions', value='today')
+
+
+def user_statistics_apply_filters_and_recalculate(session_id, data, segment_filter, start_date, end_date):
+    # filter the data
+    st.session_state.transaction_maped_dataset_filtered = filter_transaction_data(session_id, data,
+                                                                                  segment_filter,
+                                                                                  start_date,
+                                                                                  end_date
+                                                                                 )
+    st.session_state.cummulative_users = cummulative_users_calculation(st.session_state.transaction_maped_dataset_filtered, lookback = st.session_state.lookback_period_option)
+    st.session_state.user_types = calculating_user_types(st.session_state.transaction_maped_dataset_filtered,
+                                                         lookback_periods = [us_cf['lookback_days_1_default'], us_cf['lookback_days_2_default']],
+                                                         churning_period = us_cf['churning_days_default'])
+    st.session_state.user_sales_triangles_base,  st.session_state.user_sales_triangles_calculated, st.session_state.users_triangles_count_wide, st.session_state.users_triangles_percentage_wide, st.session_state.transactions_triangles_count_wide, st.session_state.transactions_triangles_percentage_wide, st.session_state.sales_triangles_count_wide, st.session_state.sales_triangles_percentage_wide = sales_triangles_calculation(
+        st.session_state.transaction_maped_dataset_filtered, aggregation_level = st.session_state.triangles_aggregation_option)
+    # recalculate the cummulative users
+
 st.markdown("#### Options")
 col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
 with col1:
     # lookback period in days number input
     lookback_days_default = int(us_cf['lookback_days_default'])
     lookback_period = st.number_input("Lookback period in days", min_value=1, value=lookback_days_default, key='lookback_period_option')
-    
 with col2:
-    # create multiselect for segment
-    get_segment_default_values(st.session_state.transaction_maped_dataset, get_session_id())
-    st.selectbox("Segment", st.session_state.segment_default_values, key='segment_option')
-    # filter the data by segment
-    if st.session_state.segment_option != 'All':
-        st.session_state.transaction_maped_dataset_filtered = st.session_state.transaction_maped_dataset[st.session_state.transaction_maped_dataset['segment'] == st.session_state.segment_option]
-    else:
-        st.session_state.transaction_maped_dataset_filtered = st.session_state.transaction_maped_dataset
+    # trangle aggregation level
+    triangles_aggregation_default = us_cf['triangles_aggregation_default']
+    triangles_aggregation_default_list = ['day', 'week', 'month', 'quarter', 'year']
+    triangles_aggregation = st.selectbox("Select aggregation level for triangles",
+                                         triangles_aggregation_default_list,
+                                         index=triangles_aggregation_default_list.index(triangles_aggregation_default), key='triangles_aggregation_option')
 
+
+# create a button that filteres the data
+st.button('Apply filters / Recalculate Data', key='filter_data_button', on_click=user_statistics_apply_filters_and_recalculate,
+          args=(session_id, st.session_state.transaction_maped_dataset,
+                st.session_state.segment_filter_transactions,
+                st.session_state.start_date_filter_transactions,
+                st.session_state.end_date_filter_transactions))
+
+if 'transaction_maped_dataset_filtered' not in st.session_state:
+    st.session_state.transaction_maped_dataset_filtered = st.session_state.transaction_maped_dataset    
 
 if 'cummulative_users' not in st.session_state:
     st.session_state.cummulative_users = cummulative_users_calculation(st.session_state.transaction_maped_dataset_filtered, lookback = st.session_state.lookback_period_option)
@@ -474,16 +511,8 @@ if 'cummulative_users' not in st.session_state:
                                                          lookback_periods = [us_cf['lookback_days_1_default'], us_cf['lookback_days_2_default']],
                                                          churning_period = us_cf['churning_days_default'])
     st.session_state.user_sales_triangles_base, st.session_state.user_sales_triangles_calculated, st.session_state.users_triangles_count_wide, st.session_state.users_triangles_percentage_wide, st.session_state.transactions_triangles_count_wide, st.session_state.transactions_triangles_percentage_wide, st.session_state.sales_triangles_count_wide, st.session_state.sales_triangles_percentage_wide = sales_triangles_calculation(
-        st.session_state.transaction_maped_dataset_filtered, aggregation_level = us_cf['triangles_aggregation_default'])
-
-# create a button that recalculates the cummulative users if pressed
-if st.button("Recalculate users"):
-    st.session_state.cummulative_users = cummulative_users_calculation(st.session_state.transaction_maped_dataset_filtered, lookback = st.session_state.lookback_period_option)
-    st.session_state.user_types = calculating_user_types(st.session_state.transaction_maped_dataset_filtered,
-                                                         lookback_periods = [us_cf['lookback_days_1_default'], us_cf['lookback_days_2_default']],
-                                                         churning_period = us_cf['churning_days_default'])
-    st.session_state.user_sales_triangles_base,  st.session_state.user_sales_triangles_calculated, st.session_state.users_triangles_count_wide, st.session_state.users_triangles_percentage_wide, st.session_state.transactions_triangles_count_wide, st.session_state.transactions_triangles_percentage_wide, st.session_state.sales_triangles_count_wide, st.session_state.sales_triangles_percentage_wide = sales_triangles_calculation(
-        st.session_state.transaction_maped_dataset_filtered, aggregation_level = us_cf['triangles_aggregation_default'])
+        st.session_state.transaction_maped_dataset_filtered, aggregation_level = st.session_state.triangles_aggregation_option)
+    
 
 # if developer mode: show the cummulative users dataframe
 if us_cf['developer_mode']:
@@ -573,25 +602,30 @@ period_1_days_description = us_cf['lookback_days_1_default']
 period_2_days_description = us_cf['lookback_days_2_default']
 churning_period_days_description = us_cf['churning_days_default']
 
-new_user_desctiption = f'User who purchesed only in the latest period.'
-returning_user_description = f'User who purchesed in two consecutive periods.'
-rare_user_description = f'User who purchesed only in the latest period and not in the previous period, but purchased before too. (not a new user)'
-potentially_churning_user_description = f'User who purchased in the previous period, but not in the latest period.'
+new_user_desctiption = f'User who purchesed only in the latest period. ({period_1_days_description} days ago to given day and not before = First purchase in the last {period_1_days_description} days)'
+returning_user_description = f'User who purchesed in the past two consecutive periods. ({period_2_days_description} days ago to {period_1_days_description} days ago and {period_1_days_description} days ago to given day)'
+rare_user_description = f'User who purchesed only in the latest period and not in the previous period, but purchased before too. ({period_1_days_description} days ago to given day and not in the previous {period_2_days_description} to {period_1_days_description} period, and not a new user)'
+potentially_churning_user_description = f'User who purchased in the previous period, but not in the latest period. (purchased only in the {period_2_days_description} days ago to {period_1_days_description} days ago period and not in the latest {period_1_days_description} days ago to given day period)'
 
 st.markdown(f"""
 | User Type|Description| Before Period: (more than {period_before_days_description} ago)|Previous period: ({period_2_days_description} - {period_1_days_description} ago) |Latest period: ({period_1_days_description} ago to given day) |Churning Period: ({churning_period_days_description} day to the future) |
 |----------|:-------------|:------:|:----------:|:----------:|:----------:|
-| **new user** | {new_user_desctiption} |no|no|yes|no|
-| **returning user** | {returning_user_description} |NA|yes|yes|no|
-| **rare user** | {rare_user_description} |no|no|yes|no|
-| **potentially churning user** | {potentially_churning_user_description} |NA|yes|no|yes|
+| **new user** | {new_user_desctiption} |no|no|yes|accurate|
+| **returning user** | {returning_user_description} |?|yes|yes|accurate|
+| **rare user** | {rare_user_description} |no|no|yes|accurate|
+| **potentially churning user** | {potentially_churning_user_description} |?|yes|no|not accurate|
 """)
 
 if st.session_state.show_user_types_data:
     st.dataframe(st.session_state.user_types, use_container_width=True, hide_index=True)
 
-st.markdown("## Sales Triangles")
-st.markdown("The sales triangles show the number of transactions for each user in a given period.")
+st.markdown("## Cohort Analysis")
+st.markdown(f"""This visualization, known as a “Cohort Analysis,” 
+            displays user activity over time, highlighting user, transaction and sales values in both nominal numbers and percentages. 
+            Each row represents a cohort of users who started in a specific period, and each column tracks their activity in subsequent periods. 
+            This format is particularly effective for analyzing user retention, as it allows you to compare the activity levels of each cohort 
+            relative to their initial period. By examining this data, you can identify trends in user engagement, evaluate the effectiveness of retention strategies, 
+            and understand the long-term value of different user groups.""")
 
 # if developer mode:
 if us_cf['developer_mode']:
@@ -601,7 +635,7 @@ if us_cf['developer_mode']:
     st.markdown("### Calculated Data")
     st.dataframe(st.session_state.user_sales_triangles_calculated, use_container_width=True, hide_index=True)
 
-st.markdown("### Users")
+st.markdown("### User Cohorts")
 if show_sales_triangles_data:
     st.markdown("#### User Count - Data")
     st.dataframe(st.session_state.users_triangles_count_wide, use_container_width=True, hide_index=True)
@@ -617,7 +651,7 @@ if show_sales_triangels_graph:
     fig_heatmap_percentage = plot_triangles_heatmap(st.session_state.users_triangles_percentage_wide, type='percentage')
     st.plotly_chart(fig_heatmap_percentage, use_container_width=True, theme=None, height=800)
 
-st.markdown("### Transactions")
+st.markdown("### Transaction Cohorts")
 if show_sales_triangles_data:
     st.markdown("#### Transaction Count - Data")
     st.dataframe(st.session_state.transactions_triangles_count_wide, use_container_width=True, hide_index=True)
@@ -634,7 +668,7 @@ if show_sales_triangels_graph:
     fig_heatmap_percentage = plot_triangles_heatmap(st.session_state.transactions_triangles_percentage_wide, type='percentage')
     st.plotly_chart(fig_heatmap_percentage, use_container_width=True, theme=None, height=800)
 
-st.markdown("### Sales Value")
+st.markdown("### Sales Value Cohorts")
 if show_sales_triangles_data:
     st.markdown("#### Sales Value - Data")
     st.dataframe(st.session_state.sales_triangles_count_wide, use_container_width=True, hide_index=True)

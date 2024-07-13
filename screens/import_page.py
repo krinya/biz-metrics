@@ -4,6 +4,8 @@ import numpy as np
 
 from utils.pages_and_titles import *
 from utils.import_data_functions import *
+from utils.create_session_id import *
+session_id = get_session_id()
 
 st.title("Import")
 st.write("Here you can select from the sample datasets or upload your own dataset.")
@@ -23,17 +25,18 @@ def selected_dataset_column_mapping(dataset):
 
     return df_with_colnames_and_coltypes, colnames_in_the_dataset, coltypes_in_the_dataset
 
-dataset_selectbox_options = ["Sample Dataset 1", "Sample Dataset 2", "Sample Dataset 3", "Own Data"]
+dataset_selectbox_options_list = ["Sample Dataset 1", "Sample Dataset 2", "Sample Dataset 3", "Own Data"]
 if 'selected_dataset_selectbox_options' not in st.session_state:
-    st.write("Setting the selected dataset selectbox options")
-    st.session_state.selected_dataset_selectbox_options = dataset_selectbox_options[0]
-st.selectbox("Select a dataset", dataset_selectbox_options, key='dataset_selectbox_options', index=dataset_selectbox_options.index(st.session_state.selected_dataset_selectbox_options))
+    st.session_state.selected_dataset_selectbox_options = dataset_selectbox_options_list[0]
+st.selectbox("Select a dataset", dataset_selectbox_options_list,
+             key='dataset_selectbox_options',
+             index=dataset_selectbox_options_list.index(st.session_state.selected_dataset_selectbox_options))
 st.session_state.selected_dataset_selectbox_options = st.session_state.dataset_selectbox_options
 
 
 if st.session_state.dataset_selectbox_options == "Sample Dataset 1":
     if 'dataset1' not in st.session_state:
-        import_data_1()
+        import_data_1(session_id)
         
     st.dataframe(st.session_state.dataset1 , use_container_width=True, hide_index=True)
     col1, col2, col3 = st.columns([2, 4, 2])
@@ -45,7 +48,7 @@ if st.session_state.dataset_selectbox_options == "Sample Dataset 1":
 
 if st.session_state.dataset_selectbox_options == "Sample Dataset 2":
     if 'dataset2' not in st.session_state:
-        import_data_2()
+        import_data_2(session_id)
 
     st.dataframe(st.session_state.dataset2, use_container_width=True, hide_index=True)
     col1, col2, col3 = st.columns([2, 4, 2])
@@ -57,7 +60,7 @@ if st.session_state.dataset_selectbox_options == "Sample Dataset 2":
 
 if st.session_state.dataset_selectbox_options == "Sample Dataset 3":
     if 'dataset3' not in st.session_state:
-        import_data_3()
+        import_data_3(session_id)
 
     st.dataframe(st.session_state.dataset3, use_container_width=True, hide_index=True)
     col1, col2, col3 = st.columns([2, 4, 2])

@@ -8,6 +8,9 @@ from utils.pages_and_titles import *
 from utils.read_config import *
 from utils.import_data_functions import *
 from utils.create_session_id import *
+from utils.create_filter_defaul_values import *
+from utils.filter_transaction import *
+
 
 # read the config file
 config_all = read_config()
@@ -19,7 +22,7 @@ st.markdown("Here you can see some statistics about one users.")
 
 st.session_state.transaction_maped_dataset = check_if_data_is_loaded(get_session_id())
 
-@st.cache_resource(show_spinner="Calculating user metics. Please wait...")
+
 def calculate_all_the_user_data(transaction_data, session_id):
     '''
     Calculate user metrics by user:
@@ -36,6 +39,11 @@ def calculate_all_the_user_data(transaction_data, session_id):
     - days since last purchase
     - days between orders
     '''
+    sidebar = st.sidebar
+    empty_space = sidebar.empty()
+    with sidebar:
+        with empty_space:
+            st.markdown("Calculating user metrics...")
 
     td_raw = transaction_data.copy()
 
@@ -54,26 +62,70 @@ def calculate_all_the_user_data(transaction_data, session_id):
         total_purchased_value=('sales_value', 'sum'),
         days_since_first_purchase=('transaction_date', lambda x: (pd.Timestamp.today() - x.min()).days),
         days_since_last_purchase=('transaction_date', lambda x: (pd.Timestamp.today() - x.max()).days),
-        days_between_orders=('transaction_date', lambda x: x.sort_values().diff().mean().days)
+        # this is not working because of the following error: AttributeError: 'DatetimeArray' object has no attribute 'diff'
+        days_between_orders=('transaction_date', lambda x: pd.Series(x.sort_values().unique()).diff().dropna().mean().days)
+        #days_between_orders=('transaction_date', lambda x: x.sort_values().unique().diff().mean().days)
     ).reset_index()
+
+    with sidebar:
+        with empty_space:
+            st.markdown(" ")
 
     return td_summary
 
+st.markdown("### Filters")
+col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
+with col1:
+    # filter for segment
+    # create a list of unique values
+    st.session_state.segment_list_all = get_segment_default_values(st.session_state.transaction_maped_dataset, get_session_id())
+    # create a multi-select dropdown
+    st.multiselect('Select Segment', st.session_state.segment_list_all, default=['All'], key='segment_filter_transactions')
+with col2:
+    st.date_input('Select Start Date', key='start_date_filter_transactions', value=st.session_state.transaction_maped_dataset['transaction_date'].min())
+with col3:
+    st.date_input('Select End Date', key='end_date_filter_transactions', value='today')
 
-st.session_state.total_users_summary_data_raw = calculate_all_the_user_data(st.session_state.transaction_maped_dataset, get_session_id())
+
+def single_user_statistics_apply_filters_and_recalculate(session_id, data, segment_filter, start_date, end_date):
+    # filter the data
+    st.session_state.transaction_maped_dataset_filtered = filter_transaction_data(session_id, data,
+                                                                                  segment_filter,
+                                                                                  start_date,
+                                                                                  end_date
+                                                                                 )
+    st.session_state.total_users_summary_data_filtered = calculate_all_the_user_data(st.session_state.transaction_maped_dataset_filtered , get_session_id())
+    st.session_state.unique_user_id_list = st.session_state.transaction_maped_dataset_filtered['user_id'].unique()
+
+# create a button that filteres the data
+st.button('Apply filters / Recalculate Data', key='filter_data_button', on_click=single_user_statistics_apply_filters_and_recalculate,
+          args=(session_id, st.session_state.transaction_maped_dataset,
+                st.session_state.segment_filter_transactions,
+                st.session_state.start_date_filter_transactions,
+                st.session_state.end_date_filter_transactions))
+
+if 'transaction_maped_dataset_filtered' not in st.session_state:
+    st.session_state.transaction_maped_dataset_filtered = filter_transaction_data(get_session_id(), st.session_state.transaction_maped_dataset,
+                                                                                  st.session_state.segment_filter_transactions,
+                                                                                  st.session_state.start_date_filter_transactions,
+                                                                                  st.session_state.end_date_filter_transactions
+                                                                                 )
+    st.session_state.total_users_summary_data_filtered = calculate_all_the_user_data(st.session_state.transaction_maped_dataset_filtered , get_session_id())
+    st.session_state.unique_user_id_list = st.session_state.transaction_maped_dataset_filtered['user_id'].unique()
+if 'unique_user_id_list' not in st.session_state:
+    st.session_state.unique_user_id_list = st.session_state.transaction_maped_dataset['user_id'].unique()
 
 if sus_cf['developer_mode']:
     st.markdown("## transaction_maped_dataset - Raw Data")
     st.dataframe(st.session_state.transaction_maped_dataset, use_container_width=True, hide_index=True)
-    st.markdown("## total_users_summary_data - Raw Data")
-    st.dataframe(st.session_state.total_users_summary_data_raw, use_container_width=True, hide_index=True)
+    st.markdown("## transaction_maped_dataset - Filtered Data")
+    st.dataframe(st.session_state.transaction_maped_dataset_filtered, use_container_width=True, hide_index=True)
 
 # st.markdown("## User Selection")
 col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
 col1, col2 = st.columns([1, 1])
 with col1:
-    unique_user_id_list = st.session_state.transaction_maped_dataset['user_id'].unique()
-    st.selectbox("Select a user", unique_user_id_list, key="selected_user_id")
+    st.selectbox("Select a user", st.session_state.unique_user_id_list, key="selected_user_id")
 with col2:
     st.checkbox("Show selected user data", key="show_selected_user_data", value=False)
 
@@ -92,8 +144,8 @@ def filter_user_data(transaction_data, selected_user_id):
 def filter_user_data_for_selected_user(transacttion_data_summary, selected_user_id):
     return transacttion_data_summary[transacttion_data_summary['user_id'] == selected_user_id]
 
-st.session_state.selected_user_data = filter_user_data(st.session_state.transaction_maped_dataset, st.session_state.selected_user_id)
-st.session_state.selected_user_data_summary = filter_user_data_for_selected_user(st.session_state.total_users_summary_data_raw, st.session_state.selected_user_id)
+st.session_state.selected_user_data = filter_user_data(st.session_state.transaction_maped_dataset_filtered, st.session_state.selected_user_id)
+st.session_state.selected_user_data_summary = filter_user_data_for_selected_user(st.session_state.total_users_summary_data_filtered, st.session_state.selected_user_id)
 
 
 st.markdown("## User Lifetime Values")

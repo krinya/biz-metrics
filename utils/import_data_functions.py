@@ -5,8 +5,10 @@ import streamlit as st
 from utils.import_data_functions import * 
 from utils.create_session_id import *
 
+session_id = get_session_id()
 
-def load_sample_data(session_id):
+
+def load_sample_data(session_id=session_id):
     if 'dataset2' not in st.session_state or 'transaction_maped_dataset' not in st.session_state:
         st.session_state.dataset2, _ = import_data_2(session_id=session_id)
         user_id_column_defualt = 'Customer ID'
@@ -27,7 +29,7 @@ def load_sample_data(session_id):
       
 
 
-def check_if_data_is_loaded(session_id):
+def check_if_data_is_loaded(session_id=session_id):
     if 'transaction_maped_dataset' not in st.session_state:
         st.error("Please got the the 'import data' page and map the columns first or you can import a sample here.")
         # create a button that loads the sample data if the user has not imported any data
@@ -37,8 +39,7 @@ def check_if_data_is_loaded(session_id):
     else: 
         return st.session_state.transaction_maped_dataset
 
-@st.cache_resource(show_spinner="Importing the dataset...")
-def import_data_1():
+def import_data_1(session_id=session_id):
     if 'dataset1' not in st.session_state:
         dataset1_path = "sample_datasets/ecommerce_data1.csv"
         dataset1 = pd.read_csv(dataset1_path).convert_dtypes()
@@ -47,8 +48,7 @@ def import_data_1():
     return st.session_state.dataset1, st.session_state.dataset1_shape
 
 
-@st.cache_resource(show_spinner="Importing the dataset...")
-def import_data_2(session_id = None):
+def import_data_2(session_id=session_id):
     if 'dataset2' not in st.session_state:
         dataset2_path = "sample_datasets/ecommerce_data2.csv"
         dataset2 = pd.read_csv(dataset2_path).convert_dtypes()
@@ -56,8 +56,7 @@ def import_data_2(session_id = None):
         st.session_state.dataset2_shape = dataset2.shape
     return st.session_state.dataset2, st.session_state.dataset2_shape
 
-st.cache_resource(show_spinner="Importing the dataset...")
-def import_data_3(session_id = None):
+def import_data_3(session_id=session_id):
     if 'dataset3' not in st.session_state:
         dataset3_path = "sample_datasets/ecommerce_data3.csv"
         dataset3 = pd.read_csv(dataset3_path, encoding='latin1').convert_dtypes()

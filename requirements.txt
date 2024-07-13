@@ -2,4 +2,3 @@ pandas
 streamlit
 plotly
 streamlit-extras
-streamlit-option-menu

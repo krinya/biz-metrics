@@ -23,3 +23,7 @@ user_statistics:
   triangles_aggregation_default: 'quarter'
   show_sales_trinangles_data_default: False
   show_sales_tringales_graph_default: True
+
+ideas:
+  developer_mode: False
+  show_ideas_default: True
