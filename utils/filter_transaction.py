@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
-from streamlit_option_menu import option_menu
 
 from utils.pages_and_titles import *
 from utils.read_config import *
