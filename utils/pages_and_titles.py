@@ -9,13 +9,18 @@ def set_page(layout = 'wide', page_title = 'Biz Metrics'):
 
     pages = {
         "Home": [st.Page("screens/home.py", title="Home", icon="🏠")],
+
         "Import": [st.Page("screens/import_page.py", title="Import data", icon="🔵")],
+
         # "Registration statistics": [st.Page("screens/registration_statistics.py", title="Registration Statistics", icon="🔵")],
         "Transaction statistics": [st.Page("screens/transaction_statistics_time_series.py", title="Time Series", icon="🔵")],
+
         "User statistics": [
             st.Page("screens/single_user_view.py", title="Single User View", icon="🔵"),
+            st.Page("screens/all_user_view.py", title="All User View", icon="🔵"),
             st.Page("screens/user_statistics.py", title="User Statistics", icon="🔵")
         ],
+        
         "Development": [
             st.Page("screens/sample_datasets.py", title="Sample Datasets", icon="🔵"),
             st.Page("screens/ideas.py", title="Ideas", icon="🔵")

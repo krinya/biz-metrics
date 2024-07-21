@@ -11,6 +11,9 @@ single_user_view:
   developer_mode: False
   user_id_default: 27345
 
+all_user_view:
+  developer_mode: False
+
 user_statistics:
   developer_mode: False
   lookback_days_default: 180

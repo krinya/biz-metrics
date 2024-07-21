@@ -24,6 +24,11 @@ if not show_ideas:
 
 st.title("Some other ideas")
 
+st.markdown("## Registration statistics")
+st.markdown("Registration statistics is missing. For that we would need registration data. We then we could analyze:")
+st.markdown("Registration per period (number and rate/ percent), conversion rate, conversion rate who reaches N purchases")
+st.markdown("Also if data contains source, location, device, etc. we could analyze these as well.")
+
 st.markdown("## Market basket analysis")
 st.markdown("Which products are bought together? To give product recommendations.")
 
