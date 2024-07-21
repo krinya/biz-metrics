@@ -59,11 +59,15 @@ st.markdown("#### Step 1: Import data")
 # as this is a pilot tool there are some sample datasets but you can upload your own transaction data as well
 # currentyl registration data is not needed, and therefore the usege of the user data is not implemented everyting is based on the transaction data
 st.markdown(
-    f"""* Go to the [**Import Data**]({base_url}/import_page) page and choose among the sample datasets or upload your own transaction data.
+    f"""* Go to the [**Import Data**]({base_url}/import_page) page""")
+if st.button("Go to import data page", key='go_to_import_page_button'):
+    st.switch_page("screens/import_page.py")
+st.markdown(
+    f"""
+    * Choose among the sample datasets or upload your own transaction data.
     (Currently the tool is using only transaction data, and all the statistics are calculated based on that data. Future versions will include user data as well.)""")
 st.markdown(
-    f"""* Once you selected the dataset that you want to give as input and it is imported, you need to map the columns of the dataset.
-    In short, you need to tell which column in your dataset contains what kind of information.
+    f"""* Map the columns of the dataset: In short, you need to tell which column in your dataset contains what kind of information.
     E.g. which column contains the user_id, transaction_id, transaction_date, etc. This is how the tool can understand your data.
     """)
 
@@ -74,11 +78,25 @@ f"""Once you imported the data and mapped the columns of it, you can navigate to
 st.subheader(f"""Short description of the pages""")
 st.markdown(
 f"""
-* [**Time Series**]({base_url}/transaction_statistics_time_series): Placeholder for the description of the page
-* [**Single User View**]({base_url}/single_user_view): Placeholder for the description of the page
-* [**All User View**]({base_url}/all_user_view): Placeholder for the description of the page
+* [**Time Series**]({base_url}/transaction_statistics_time_series): Placeholder for the description of the page"""
+)
+if st.button("Go to Time Series page", key='go_to_time_series_page_button'):
+    st.switch_page("screens/transaction_statistics_time_series.py")
+st.markdown(f"""
+* [**Single User View**]({base_url}/single_user_view): Placeholder for the description of the page""")
+if st.button("Go to Single User View page", key='go_to_single_user_view_page_button'):
+    st.switch_page("screens/single_user_view.py")
+st.markdown(
+f"""
+* [**All User View**]({base_url}/all_user_view): Placeholder for the description of the page""")
+if st.button("Go to All User View page", key='go_to_all_user_view_page_button'):
+    st.switch_page("screens/all_user_view.py")
+st.markdown(
+f"""
 * [**User Statistics**]({base_url}/user_statistics): Placeholder for the description of the page
 """)
+if st.button("Go to User Statistics page", key='go_to_user_statistics_page_button'):
+    st.switch_page("screens/user_statistics.py")
 
 
 
